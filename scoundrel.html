@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoundrel - Le Donjon du Scélérat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Uncial+Antiqua&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles & Animations */
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #1a1815;
+            color: #d4c5a9;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232c2824' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        h1, h2, h3, .fantasy-font {
+            font-family: 'Uncial Antiqua', cursive;
+        }
+
+        .cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-disabled {
+            filter: grayscale(0.8) brightness(0.5);
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        /* Suit Colors */
+        .suit-hearts, .suit-diamonds { color: #ef4444; } /* Red-500 */
+        .suit-spades, .suit-clubs { color: #e5e7eb; }    /* Gray-200 */
+
+        /* Custom Scrollbar for Log */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        .shake-anim {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes heal {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.1); filter: brightness(1.5); box-shadow: 0 0 15px #ef4444; }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .heal-anim {
+            animation: heal 0.5s ease-in-out;
+        }
+
+        @keyframes slash {
+            0% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+            50% { clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%); background-color: #7f1d1d; }
+            100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+        }
+        .damage-anim {
+            animation: shake 0.3s ease-in-out;
+            color: #ef4444;
+        }
+
+        .parchment {
+            background-color: #d4c5a9;
+            color: #2c2824;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23bcaaa4' fill-opacity='0.15' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 selection:bg-red-900 selection:text-white overflow-hidden">
+
+    <!-- Game Container -->
+    <div id="game-container" class="relative w-full max-w-5xl h-[95vh] flex flex-col gap-4">
+        
+        <!-- Header: Stats & Title -->
+        <header class="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-stone-700 backdrop-blur-sm shadow-xl z-10">
+            <div class="flex items-center gap-6">
+                <div class="text-center">
+                    <h2 class="text-stone-400 text-xs tracking-widest cinzel">SANTÉ</h2>
+                    <div id="health-display" class="text-4xl fantasy-font text-red-500 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">20</div>
+                </div>
+                <div class="h-10 w-px bg-stone-700"></div>
+                <div class="text-center">
+                    <h2 class="text-stone-400 text-xs tracking-widest cinzel">SALLE</h2>
+                    <div id="cards-remaining" class="text-xl cinzel text-stone-300">44 / 44</div>
+                </div>
+            </div>
+
+            <h1 class="text-3xl md:text-5xl text-amber-600 fantasy-font tracking-wider drop-shadow-md text-center absolute left-1/2 -translate-x-1/2 hidden md:block">SCOUNDREL</h1>
+
+            <div class="flex gap-3">
+                <button onclick="toggleRules()" class="px-4 py-2 bg-stone-800 hover:bg-stone-700 border border-stone-600 rounded text-stone-300 hover:text-white transition cinzel text-sm">
+                    Règles
+                </button>
+                <button onclick="restartGame()" class="px-4 py-2 bg-red-900/50 hover:bg-red-800/80 border border-red-800 rounded text-red-100 transition cinzel text-sm">
+                    Recommencer
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Area: Room & Weapon -->
+        <main class="flex-grow flex flex-col md:flex-row gap-6 relative">
+            
+            <!-- Left Panel: Deck & Weapon -->
+            <aside class="w-full md:w-1/4 flex flex-col gap-4">
+                
+                <!-- Weapon Slot -->
+                <div class="flex-1 bg-stone-900/80 border border-stone-700 rounded-xl p-4 flex flex-col items-center justify-start shadow-inner relative group">
+                    <h3 class="text-stone-500 cinzel text-sm mb-2 w-full text-center border-b border-stone-800 pb-1">ARME ÉQUIPÉE</h3>
+                    
+                    <div id="weapon-slot" class="relative w-32 h-48 border-2 border-dashed border-stone-700 rounded-lg flex items-center justify-center bg-black/20 mt-4 transition-all duration-300">
+                        <span class="text-stone-600 text-xs text-center px-2">Aucune Arme<br>(Poings nus)</span>
+                    </div>
+
+                    <div id="weapon-stats" class="w-full mt-2 text-center opacity-0 transition-opacity flex flex-col gap-1">
+                        <p class="text-amber-500 cinzel text-sm">Dégâts: <span id="weapon-dmg" class="text-lg font-bold">0</span></p>
+                        <p class="text-stone-400 text-xs">Cible Max: <span id="weapon-target" class="text-stone-300">Tout</span></p>
+                        
+                        <!-- Toggle Weapon Usage -->
+                        <div class="mt-2 flex items-center justify-center gap-2 bg-black/40 py-1 px-2 rounded border border-stone-700/50">
+                            <input type="checkbox" id="use-weapon-check" class="w-4 h-4 accent-amber-600 cursor-pointer rounded bg-stone-800 border-stone-600" checked>
+                            <label for="use-weapon-check" class="text-xs text-stone-400 cursor-pointer cinzel hover:text-stone-200 select-none">Utiliser</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deck Visual -->
+                <div class="h-24 bg-stone-900/50 border border-stone-800 rounded-xl flex items-center justify-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-30"></div>
+                    <span class="fantasy-font text-stone-600 text-lg z-10">Le Donjon</span>
+                    <!-- Deck piles visual css stack -->
+                    <div id="deck-visual" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-16 bg-red-900 border border-stone-400 rounded shadow-[2px_2px_0px_#1c1917,4px_4px_0px_#1c1917]"></div>
+                </div>
+
+            </aside>
+
+            <!-- Center: The Room -->
+            <section class="flex-grow bg-black/30 border border-stone-700/50 rounded-xl p-4 md:p-8 flex flex-col items-center justify-center relative">
+                
+                <div class="absolute top-4 left-4 text-stone-500 cinzel text-xs tracking-widest">SALLE ACTUELLE</div>
+                
+                <!-- Cards Grid -->
+                <div id="room-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl place-items-center">
+                    <!-- Cards injected via JS -->
+                </div>
+
+                <!-- Action Bar -->
+                <div class="mt-8 flex items-center gap-4 h-12">
+                    <div id="room-progress" class="flex gap-2">
+                        <!-- Progress dots -->
+                        <div class="w-3 h-3 rounded-full bg-stone-700 transition-colors" id="dot-1"></div>
+                        <div class="w-3 h-3 rounded-full bg-stone-700 transition-colors" id="dot-2"></div>
+                        <div class="w-3 h-3 rounded-full bg-stone-700 transition-colors" id="dot-3"></div>
+                    </div>
+                    
+                    <div class="h-8 w-px bg-stone-700 mx-2"></div>
+
+                    <button id="flee-btn" onclick="fleeRoom()" class="bg-stone-800 hover:bg-stone-700 disabled:opacity-30 disabled:cursor-not-allowed text-stone-300 px-6 py-2 rounded border border-stone-600 cinzel text-sm transition-all flex items-center gap-2">
+                        <span>Fuir la salle</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Feedback Toast -->
+                <div id="toast" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 transition-opacity duration-300 z-50">
+                    <span class="text-4xl fantasy-font text-red-500 drop-shadow-lg stroke-black" id="toast-text"></span>
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- Footer: Log -->
+        <footer class="h-32 bg-stone-900 border-t border-stone-700 flex flex-col relative">
+            <div class="absolute top-0 left-0 bg-stone-800 text-xs text-stone-400 px-2 py-0.5 rounded-br cinzel">JOURNAL</div>
+            <div id="game-log" class="flex-grow p-4 pt-6 overflow-y-auto scrollbar-hide text-sm font-mono space-y-1 text-stone-400">
+                <div class="text-amber-700">Bienvenue dans le donjon, aventurier...</div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Modals -->
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 modal-overlay" onclick="toggleRules()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-[#1c1917] border-2 border-stone-600 rounded-xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto parchment text-stone-900">
+            <h2 class="text-3xl fantasy-font text-center mb-6 text-red-900 border-b-2 border-red-900/20 pb-2">Règles du Scélérat</h2>
+            
+            <div class="space-y-4 font-serif leading-relaxed">
+                <p><strong>Objectif :</strong> Videz le donjon sans mourir. Votre score correspond à vos points de vie restants.</p>
+                
+                <h3 class="text-lg font-bold text-red-900 cinzel mt-4">Le Donjon</h3>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Un jeu de cartes modifié (sans valets/reines/rois rouges, ni as rouges).</li>
+                    <li><strong>Monstres (Piques ♠ & Trèfles ♣) :</strong> Infligent des dégâts égaux à leur valeur (V=11, D=12, R=13, As=14).</li>
+                    <li><strong>Armes (Carreaux ♦) :</strong> Réduisent les dégâts des monstres.</li>
+                    <li><strong>Potions (Cœurs ♥) :</strong> Soignent vos PV (Max 20).</li>
+                </ul>
+
+                <h3 class="text-lg font-bold text-red-900 cinzel mt-4">Déroulement</h3>
+                <p>Les salles contiennent 4 cartes. Vous devez soit :</p>
+                <ol class="list-decimal pl-5 space-y-1">
+                    <li><strong>Affronter la salle :</strong> Interagissez avec 3 cartes au choix. La 4ème reste pour la salle suivante.</li>
+                    <li><strong>Fuir la salle :</strong> Remettez les 4 cartes sous le paquet. Impossible de fuir deux fois de suite.</li>
+                </ol>
+
+                <h3 class="text-lg font-bold text-red-900 cinzel mt-4">Combat & Armes</h3>
+                <p>Si vous combattez à mains nues, vous subissez tous les dégâts.</p>
+                <p>Si vous avez une arme, les dégâts sont : <em>Force Monstre - Valeur Arme</em>.</p>
+                <p class="italic text-sm bg-red-900/10 p-2 rounded border border-red-900/20">
+                    Important : Si vous tuez un monstre avec une arme, l'arme ne pourra plus attaquer que des monstres <strong>plus faibles</strong> que ce dernier.
+                </p>
+
+                <h3 class="text-lg font-bold text-red-900 cinzel mt-4">Soins</h3>
+                <p>Une seule potion peut être bue par salle. Les autres sont gaspillées si ramassées.</p>
+            </div>
+
+            <div class="mt-8 text-center">
+                <button onclick="toggleRules()" class="px-6 py-2 bg-red-900 text-stone-100 cinzel rounded hover:bg-red-800 transition">Compris</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/95"></div>
+        <div class="relative z-10 text-center space-y-6 animate-[fadeIn_1s]">
+            <h2 id="go-title" class="text-6xl fantasy-font text-red-600 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]">VOUS ÊTES MORT</h2>
+            <p id="go-message" class="text-2xl text-stone-400 cinzel">Le donjon a eu raison de vous.</p>
+            <p class="text-4xl text-white fantasy-font mt-4">Score: <span id="go-score">0</span></p>
+            <button onclick="restartGame()" class="mt-8 px-8 py-3 bg-stone-200 text-black cinzel font-bold text-xl rounded hover:bg-white hover:scale-105 transition">Recommencer</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Constants & State ---
+        const SUITS = {
+            SPADES: '♠',   // Monsters
+            CLUBS: '♣',    // Monsters
+            DIAMONDS: '♦', // Weapons
+            HEARTS: '♥'    // Potions
+        };
+        
+        const TYPES = {
+            MONSTER: 'monster',
+            WEAPON: 'weapon',
+            POTION: 'potion'
+        };
+
+        const RANKS = {
+            '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+            'J': 11, 'Q': 12, 'K': 13, 'A': 14
+        };
+
+        let state = {
+            hp: 20,
+            maxHp: 20,
+            deck: [],
+            room: [],
+            weapon: null, // { value: int, maxTarget: int, cardObj: obj }
+            cardsInteractedInRoom: 0,
+            potionUsedInRoom: false,
+            canFlee: true,
+            gameOver: false,
+            score: 0
+        };
+
+        // --- Core Functions ---
+
+        function initGame() {
+            // Build Deck
+            // Remove red J, Q, K, A. (Hearts/Diamonds only 2-10).
+            // Black suits (Spades/Clubs) have all ranks 2-A.
+            const deck = [];
+            
+            // Spades & Clubs (Monsters)
+            [SUITS.SPADES, SUITS.CLUBS].forEach(suit => {
+                Object.keys(RANKS).forEach(rank => {
+                    deck.push({ 
+                        suit, 
+                        rank, 
+                        value: RANKS[rank], 
+                        type: TYPES.MONSTER,
+                        id: Math.random().toString(36).substr(2, 9)
+                    });
+                });
+            });
+
+            // Diamonds (Weapons) - 2 to 10
+            ['2','3','4','5','6','7','8','9','10'].forEach(rank => {
+                deck.push({
+                    suit: SUITS.DIAMONDS,
+                    rank,
+                    value: RANKS[rank],
+                    type: TYPES.WEAPON,
+                    id: Math.random().toString(36).substr(2, 9)
+                });
+            });
+
+            // Hearts (Potions) - 2 to 10
+            ['2','3','4','5','6','7','8','9','10'].forEach(rank => {
+                deck.push({
+                    suit: SUITS.HEARTS,
+                    rank,
+                    value: RANKS[rank],
+                    type: TYPES.POTION,
+                    id: Math.random().toString(36).substr(2, 9)
+                });
+            });
+
+            // Shuffle
+            state.deck = shuffle(deck);
+            state.hp = 20;
+            state.room = [];
+            state.weapon = null;
+            state.cardsInteractedInRoom = 0;
+            state.potionUsedInRoom = false;
+            state.canFlee = true;
+            state.gameOver = false;
+            state.score = 0;
+
+            log("Une nouvelle descente commence. PV: 20");
+            dealRoom(true); // Initial deal
+            updateUI();
+            
+            // Hide Modals
+            document.getElementById('game-over-modal').classList.add('hidden');
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function dealRoom(isStart = false) {
+            // Fill room to 4 cards
+            const needed = 4 - state.room.length;
+            if (needed > 0) {
+                if (state.deck.length === 0) {
+                    // Deck empty, check win condition if room empty or unplayable? 
+                    // Actually Scoundrel ends when deck empty and room empty or cleared.
+                    // If room has cards, we play them.
+                } else {
+                    const newCards = state.deck.splice(0, needed);
+                    state.room = [...state.room, ...newCards];
+                    
+                    // Animation delay simulation
+                    setTimeout(() => {
+                         const container = document.getElementById('room-container');
+                         // trigger reflow animations if needed
+                    }, 50);
+                }
+            }
+
+            // Reset room interaction state
+            state.cardsInteractedInRoom = 0;
+            state.potionUsedInRoom = false;
+            
+            // Check win condition immediately if room is empty and deck is empty
+            checkWin();
+        }
+
+        function interact(index) {
+            if (state.gameOver) return;
+            
+            const card = state.room[index];
+            if (!card) return;
+
+            let interactionSuccess = false;
+
+            if (card.type === TYPES.MONSTER) {
+                interactionSuccess = fightMonster(card);
+            } else if (card.type === TYPES.WEAPON) {
+                equipWeapon(card);
+                interactionSuccess = true;
+            } else if (card.type === TYPES.POTION) {
+                interactionSuccess = drinkPotion(card);
+            }
+
+            if (interactionSuccess) {
+                // Remove card from room
+                state.room.splice(index, 1);
+                state.cardsInteractedInRoom++;
+
+                // Prevent fleeing once interacted
+                // Actually rule says: "At the start of each room you have a choice... If you choose to face... interact with 3".
+                // So once you interact with 1, you can't flee anymore for this room cycle.
+                
+                checkRoomProgress();
+                updateUI();
+            }
+        }
+
+        function fightMonster(card) {
+            const monsterStr = card.value;
+            let damage = monsterStr;
+            let usedWeapon = false;
+            
+            // Check toggle
+            const useWeaponToggle = document.getElementById('use-weapon-check').checked;
+
+            // Weapon Logic
+            if (state.weapon && useWeaponToggle) {
+                // Check if weapon can hit this monster (Monster Value < Last Monster Defeated)
+                // If weapon is fresh (maxTarget infinity), it can hit anything.
+                if (card.value < state.weapon.maxTarget) {
+                    // Valid hit
+                    const weaponDmg = state.weapon.value;
+                    damage = Math.max(0, monsterStr - weaponDmg);
+                    usedWeapon = true;
+                } else {
+                    // Cannot use weapon (Monster too strong for dulled blade)
+                    log(`Arme émoussée (Max ${state.weapon.maxTarget - 1}) ! Vous combattez à mains nues contre ${card.value}.`, 'text-orange-400');
+                    // Force barehand
+                }
+            } else if (state.weapon && !useWeaponToggle) {
+                 log(`Vous choisissez de combattre à mains nues pour préserver votre arme.`, 'text-stone-500');
+            }
+
+            // Apply Damage
+            if (damage > 0) {
+                state.hp -= damage;
+                showToast(`-${damage}`, 'text-red-600');
+                triggerShake();
+                log(`Combat contre ${cardRank(card.rank)}${card.suit}. Dégâts subis: ${damage}.`, 'text-red-400');
+            } else {
+                log(`Vous massacrez le ${cardRank(card.rank)}${card.suit} sans subir de dégâts!`, 'text-stone-300');
+                showToast("BLOQUÉ", 'text-stone-300');
+            }
+
+            // Update Weapon State if used
+            if (usedWeapon) {
+                // Weapon max target becomes the value of the monster just killed
+                // The weapon is now "covered" by this monster
+                state.weapon.maxTarget = card.value;
+            }
+
+            if (state.hp <= 0) {
+                endGame(false, card); // Card that killed you doesn't count for score
+                return true; 
+            }
+
+            return true;
+        }
+
+        function equipWeapon(card) {
+            state.weapon = {
+                value: card.value,
+                maxTarget: 999, // Infinity initially
+                cardObj: card
+            };
+            
+            // Auto-check the box when equipping new weapon
+            const checkbox = document.getElementById('use-weapon-check');
+            if(checkbox) checkbox.checked = true;
+
+            log(`Arme équipée: ${cardRank(card.rank)}${card.suit} (Force: ${card.value})`, 'text-amber-400');
+            showToast("ÉQUIPÉ", 'text-amber-500');
+        }
+
+        function drinkPotion(card) {
+            if (state.potionUsedInRoom) {
+                log("Vous avez déjà bu une potion dans cette salle! Celle-ci est gâchée.", 'text-orange-400');
+                // The card is still removed (wasted)
+                showToast("GÂCHÉ", 'text-stone-500');
+                return true;
+            }
+
+            const healAmount = card.value;
+            const oldHp = state.hp;
+            state.hp = Math.min(state.maxHp, state.hp + healAmount);
+            const actualHeal = state.hp - oldHp;
+            
+            state.potionUsedInRoom = true;
+            
+            log(`Potion bue ${cardRank(card.rank)}${card.suit}. PV +${actualHeal}.`, 'text-green-400');
+            showToast(`+${actualHeal}`, 'text-green-500');
+            
+            const hpEl = document.getElementById('health-display');
+            hpEl.classList.add('heal-anim');
+            setTimeout(() => hpEl.classList.remove('heal-anim'), 500);
+
+            return true;
+        }
+
+        function checkRoomProgress() {
+            if (state.cardsInteractedInRoom >= 3) {
+                // Room cleared
+                log("Salle nettoyée. Avancée vers la suivante...", 'text-stone-500 italic');
+                // The remaining card stays (already in array at index 0 effectively after splice)
+                // Need to deal new cards to fill back to 4
+                // Reset flee ability (new room starts)
+                state.canFlee = true;
+                dealRoom();
+            }
+        }
+
+        function fleeRoom() {
+            if (!state.canFlee) return;
+            if (state.cardsInteractedInRoom > 0) {
+                log("Impossible de fuir, le combat est engagé !", 'text-red-500');
+                return;
+            }
+
+            // Move current room cards to bottom of deck
+            // Rules say "scoop up all 4".
+            const cardsToMove = [...state.room];
+            state.room = [];
+            state.deck = [...state.deck, ...cardsToMove]; // Add to end (bottom)
+
+            log("Vous fuyez la salle ! Les monstres retournent dans l'ombre...", 'text-yellow-200');
+            
+            state.canFlee = false; // Cannot flee twice in a row
+            dealRoom();
+            updateUI();
+        }
+
+        function checkWin() {
+            if (state.deck.length === 0 && state.room.length < 4) {
+                // If we can't make a full room, the game ends.
+                // "If you reach a point where you can't lay out a full room just toss whatever's left... congratulations you've survived"
+                endGame(true);
+            }
+        }
+
+        function endGame(survived, killingCard = null) {
+            state.gameOver = true;
+            const modal = document.getElementById('game-over-modal');
+            const title = document.getElementById('go-title');
+            const msg = document.getElementById('go-message');
+            const scoreDisplay = document.getElementById('go-score');
+            
+            modal.classList.remove('hidden');
+
+            if (survived) {
+                let finalScore = state.hp;
+                // Bonus logic: If HP=20 and last card was potion (not fully implementable perfectly as "last card" is vague in code, but standard rules say check last room card). 
+                // We'll stick to basic HP score.
+                
+                title.textContent = "VICTOIRE";
+                title.className = "text-6xl fantasy-font text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)]";
+                msg.textContent = "Vous êtes sorti du donjon vivant !";
+                scoreDisplay.textContent = finalScore;
+            } else {
+                // Calculate negative score
+                // Sum of all monsters in deck + room (excluding killing card)
+                let scoreSum = 0;
+                
+                // Count deck
+                state.deck.forEach(c => {
+                    if (c.type === TYPES.MONSTER) scoreSum += c.value;
+                });
+                // Count room (excluding killing card if passed, though killing card is usually card currently being processed, not in room array yet if we removed it? 
+                // In my code, I didn't splice it yet if it killed me? Let's check fight logic.
+                // Logic: damage applied. If hp<=0 return true. Card was NOT spliced yet.
+                
+                state.room.forEach(c => {
+                    if (c === killingCard) return; // Don't count the one that killed you
+                    if (c.type === TYPES.MONSTER) scoreSum += c.value;
+                });
+
+                title.textContent = "MORT";
+                title.className = "text-6xl fantasy-font text-red-600 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]";
+                msg.textContent = "Votre cadavre rejoint le donjon.";
+                scoreDisplay.textContent = `-${scoreSum}`;
+            }
+        }
+
+        // --- UI Rendering ---
+
+        function updateUI() {
+            // Health
+            const hpEl = document.getElementById('health-display');
+            hpEl.innerText = state.hp;
+            hpEl.className = `text-4xl fantasy-font drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] ${state.hp <= 5 ? 'text-red-600 animate-pulse' : 'text-red-500'}`;
+
+            // Cards Counter
+            document.getElementById('cards-remaining').innerText = `${state.deck.length} / 44`;
+
+            // Weapon
+            const wSlot = document.getElementById('weapon-slot');
+            const wStats = document.getElementById('weapon-stats');
+            
+            if (state.weapon) {
+                wSlot.innerHTML = renderCardInner(state.weapon.cardObj);
+                wSlot.className = "relative w-32 h-48 bg-stone-200 rounded-lg shadow-lg transform transition hover:scale-105 border-2 border-amber-600";
+                
+                document.getElementById('weapon-dmg').innerText = state.weapon.value;
+                document.getElementById('weapon-target').innerText = state.weapon.maxTarget === 999 ? "Tous" : `< ${state.weapon.maxTarget}`;
+                wStats.classList.remove('opacity-0');
+            } else {
+                wSlot.innerHTML = `<span class="text-stone-600 text-xs text-center px-2 cinzel">Mains<br>Nues</span>`;
+                wSlot.className = "relative w-32 h-48 border-2 border-dashed border-stone-700 rounded-lg flex items-center justify-center bg-black/20 mt-4 transition-all duration-300";
+                wStats.classList.add('opacity-0');
+            }
+
+            // Room Cards
+            const container = document.getElementById('room-container');
+            container.innerHTML = '';
+            
+            state.room.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                
+                // Styling based on Suit
+                let bgClass = "bg-stone-200";
+                let textClass = (card.suit === SUITS.HEARTS || card.suit === SUITS.DIAMONDS) ? "text-red-600" : "text-slate-900";
+                
+                // Visual Indicator for Interaction Validity
+                // If Monster: Check if weapon works? (Visual hint maybe?)
+                // If Potion: Check if potion used?
+                let opacityClass = "";
+                let cursorClass = "cursor-pointer hover:-translate-y-2";
+                
+                if (card.type === TYPES.POTION && state.potionUsedInRoom) {
+                    opacityClass = "opacity-50 grayscale";
+                    // Still clickable to discard/waste
+                }
+
+                cardEl.className = `relative w-32 h-48 ${bgClass} rounded-lg shadow-xl card-shadow ${cursorClass} select-none transition-all duration-200 ${opacityClass}`;
+                cardEl.onclick = () => interact(index);
+                cardEl.innerHTML = renderCardInner(card, textClass);
+                
+                container.appendChild(cardEl);
+            });
+
+            // Progress Dots
+            for(let i=1; i<=3; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i <= state.cardsInteractedInRoom) {
+                    dot.className = "w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_5px_#f59e0b]";
+                } else {
+                    dot.className = "w-3 h-3 rounded-full bg-stone-700";
+                }
+            }
+
+            // Flee Button
+            const fleeBtn = document.getElementById('flee-btn');
+            // Can flee if: CanFlee is true AND interaction count is 0
+            if (state.canFlee && state.cardsInteractedInRoom === 0) {
+                fleeBtn.disabled = false;
+                fleeBtn.classList.remove('opacity-30', 'cursor-not-allowed');
+            } else {
+                fleeBtn.disabled = true;
+                fleeBtn.classList.add('opacity-30', 'cursor-not-allowed');
+            }
+        }
+
+        function renderCardInner(card, colorClass = "") {
+            // Force color based on suit if not provided
+            if (!colorClass) {
+                colorClass = (card.suit === SUITS.HEARTS || card.suit === SUITS.DIAMONDS) ? "text-red-600" : "text-slate-900";
+            }
+            
+            // Icon central
+            let icon = card.suit;
+            // Maybe SVG icons? Let's stick to text unicode for robustness in single file, but style them huge.
+            
+            const rankDisp = cardRank(card.rank);
+
+            return `
+                <div class="absolute top-2 left-2 text-xl font-bold cinzel ${colorClass}">${rankDisp}</div>
+                <div class="absolute top-2 left-6 text-xl ${colorClass}">${card.suit}</div>
+                
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-6xl ${colorClass}">${card.suit}</span>
+                </div>
+
+                <div class="absolute bottom-2 right-2 text-xl font-bold cinzel ${colorClass} rotate-180">${rankDisp}</div>
+                <div class="absolute bottom-2 right-6 text-xl ${colorClass} rotate-180">${card.suit}</div>
+                
+                <!-- Type Label -->
+                <div class="absolute bottom-8 w-full text-center text-[10px] uppercase tracking-widest text-stone-500 opacity-60 font-bold">
+                   ${cardTypeLabel(card.type)}
+                </div>
+            `;
+        }
+
+        function cardRank(r) {
+            // Keep numerical or convert Face?
+            // User requested medieval style. J/Q/K/A.
+            return r; 
+        }
+
+        function cardTypeLabel(type) {
+            if (type === TYPES.MONSTER) return "Monstre";
+            if (type === TYPES.WEAPON) return "Arme";
+            if (type === TYPES.POTION) return "Potion";
+            return "";
+        }
+
+        // --- Utilities ---
+
+        function log(msg, colorClass="text-stone-400") {
+            const logEl = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = `${colorClass} border-l-2 border-stone-800 pl-2 mb-1`;
+            entry.innerHTML = `<span class="opacity-50 text-xs">[${new Date().toLocaleTimeString('fr-FR', {hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit"})}]</span> ${msg}`;
+            logEl.prepend(entry);
+        }
+
+        function showToast(text, colorClass) {
+            const t = document.getElementById('toast');
+            const tText = document.getElementById('toast-text');
+            tText.innerText = text;
+            tText.className = `text-5xl fantasy-font drop-shadow-xl stroke-black font-bold ${colorClass}`;
+            
+            t.classList.remove('opacity-0');
+            t.style.top = '40%';
+            setTimeout(() => {
+                t.style.top = '30%'; // float up
+                t.classList.add('opacity-0');
+            }, 800);
+            setTimeout(() => {
+                t.style.top = '50%'; // reset
+            }, 1100);
+        }
+
+        function triggerShake() {
+            const gameContainer = document.getElementById('room-container');
+            gameContainer.classList.add('shake-anim');
+            const hpEl = document.getElementById('health-display');
+            hpEl.parentElement.classList.add('damage-anim');
+            
+            setTimeout(() => {
+                gameContainer.classList.remove('shake-anim');
+                hpEl.parentElement.classList.remove('damage-anim');
+            }, 500);
+        }
+
+        function toggleRules() {
+            const el = document.getElementById('rules-modal');
+            el.classList.toggle('hidden');
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        // Initialize
+        window.onload = initGame;
+
+    </script>
+</body>
+</html>
