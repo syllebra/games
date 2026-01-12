@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sélection du Jeu</title>
+    <title>Arcade Cartes - Sélection</title>
     
     <!-- Polices de caractères -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     
     <!-- Script pour les icônes -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -16,18 +16,24 @@
     <style>
         :root {
             --bg-color: #0f172a;
-            --color-regicide: #ef4444;
-            --color-scoundrel: #10b981;
-            --color-locked: #64748b;
+            
+            /* Palette des jeux */
+            --color-regicide: #ef4444;    /* Rouge - Roi */
+            --color-scoundrel: #10b981;   /* Vert - Poison */
+            --color-gridcannon: #6366f1;  /* Indigo - Stratégie */
+            --color-isaludo: #f59e0b;     /* Ambre - Désert */
+            --color-chess: #e2e8f0;       /* Argent/Blanc - Échecs */
+            --color-locked: #475569;
+            
             --text-main: #ffffff;
-            --tilt-angle: -10deg; /* L'angle d'inclinaison des panneaux */
+            --tilt-angle: -4deg; /* Angle réduit pour accommoder plus de panneaux */
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none; /* Empêche la sélection de texte pour un feeling plus "App/Jeu" */
+            user-select: none;
         }
 
         body {
@@ -40,63 +46,70 @@
         }
 
         /* --- UI CONTROLS --- */
-        .sound-toggle {
+        .ui-controls {
             position: absolute;
             top: 25px;
             right: 25px;
             z-index: 100;
-            width: 50px;
-            height: 50px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(4px);
         }
 
-        .sound-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
             color: white;
             transform: scale(1.1);
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
         }
 
-        .sound-toggle.active {
+        .icon-btn.active {
             border-color: #10b981;
             color: #10b981;
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
 
         /* --- ACCORDEON GLOBAL --- */
         .accordion {
             display: flex;
-            width: 120%; /* Plus large pour compenser le skew et éviter les bords vides */
+            width: 110%; 
             height: 100%;
-            margin-left: -10%; /* Centrer le débordement */
-            background: #000;
+            margin-left: -5%;
+            background: #020617;
         }
 
         /* --- PANNEAU INDIVIDUEL --- */
         .panel {
             position: relative;
-            flex: 1; /* Tous égaux au départ */
+            flex: 1;
             height: 100%;
-            border-right: 1px solid rgba(255,255,255,0.1);
-            border-left: 1px solid rgba(255,255,255,0.05);
-            transition: flex 0.4s cubic-bezier(0.2, 0, 0, 1), filter 0.2s ease; /* Transition accélérée pour effet nerveux */
+            border-right: 1px solid rgba(255,255,255,0.08);
+            border-left: 1px solid rgba(255,255,255,0.03);
+            
+            /* Animation d'ouverture "Snappy" */
+            transition: 
+                flex 0.5s cubic-bezier(0.2, 0, 0, 1), 
+                filter 0.3s ease,
+                background-color 0.3s ease;
+                
             overflow: hidden;
-            
-            /* L'inclinaison magique */
             transform: skewX(var(--tilt-angle));
-            
-            /* Glassmorphism de base */
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(5px);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
             
             display: flex;
             justify-content: center;
@@ -106,60 +119,58 @@
             cursor: pointer;
         }
 
-        /* Overlay couleur/dégradé */
         .panel::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8));
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.9));
             z-index: 1;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s ease;
             pointer-events: none;
         }
         
-        /* Image/Gradient de fond spécifique par jeu */
         .panel-bg {
             position: absolute;
-            top: -20%; left: -20%; right: -20%; bottom: -20%; /* Plus grand pour contrer le skew */
-            transform: skewX(calc(var(--tilt-angle) * -1)); /* Annuler le skew pour le fond */
+            top: -10%; left: -50%; right: -50%; bottom: -10%;
+            transform: skewX(calc(var(--tilt-angle) * -1));
             background-size: cover;
             background-position: center;
-            opacity: 0.3;
-            transition: transform 1s ease-out, opacity 0.3s ease;
+            opacity: 0.2;
+            transition: transform 6s ease-out, opacity 0.4s ease;
             z-index: 0;
+            filter: grayscale(0.8) sepia(0.2);
             pointer-events: none;
         }
 
-        /* --- ÉTATS HOVER (EXPANSION) --- */
+        /* --- HOVER STATES --- */
         .panel:hover {
-            flex: 4; /* S'agrandit massivement */
-            filter: brightness(1.2) contrast(1.1);
+            flex: 3.5; /* Ratio d'agrandissement */
+            filter: brightness(1.15) contrast(1.05);
             z-index: 10;
-            box-shadow: 0 0 60px rgba(0,0,0,0.8);
-            border-left: 1px solid rgba(255,255,255,0.4);
-            border-right: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 0 80px rgba(0,0,0,0.9);
+            border-color: rgba(255,255,255,0.3);
         }
 
         .panel:hover .panel-bg {
-            opacity: 0.7;
-            transform: skewX(calc(var(--tilt-angle) * -1)) scale(1.05); /* Zoom plus sec */
+            opacity: 0.5;
+            transform: skewX(calc(var(--tilt-angle) * -1)) scale(1.1);
+            filter: grayscale(0.2);
         }
 
-        /* --- CONTENU (TEXTE & ICONES) --- */
+        /* --- CONTENT --- */
         .content-wrapper {
             position: relative;
             z-index: 10;
-            /* On annule l'inclinaison pour que le texte reste droit */
             transform: skewX(calc(var(--tilt-angle) * -1));
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
             width: 100%;
-            max-width: 400px;
-            padding: 0 2rem;
-            opacity: 0.7;
-            transition: all 0.3s ease;
+            max-width: 450px;
+            padding: 0 1rem;
+            opacity: 0.6;
+            transition: all 0.4s ease;
         }
 
         .panel:hover .content-wrapper {
@@ -167,193 +178,222 @@
             transform: skewX(calc(var(--tilt-angle) * -1)) scale(1.05);
         }
 
-        /* Icône principale */
+        /* Icons */
         .icon-box {
-            margin-bottom: 1rem;
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         }
 
         .panel:hover .icon-box {
-            transform: scale(1.3) rotate(-5deg);
-            filter: drop-shadow(0 0 15px currentColor);
+            transform: scale(1.4) translateY(-10px) rotate(-5deg);
         }
 
-        /* Titre */
+        /* Typography */
         h2 {
             font-family: 'Cinzel', serif;
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+            margin-bottom: 0.2rem;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
             white-space: nowrap;
         }
+        
+        .tagline {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 1rem;
+            font-weight: 700;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .panel:hover .tagline { opacity: 1; transform: translateY(0); }
 
-        /* Description (cachée par défaut, visible au hover) */
         .description {
-            font-size: 1rem;
-            line-height: 1.6;
+            font-size: 0.9rem;
+            line-height: 1.5;
             color: rgba(255,255,255,0.9);
             max-height: 0;
             opacity: 0;
             overflow: hidden;
-            transition: all 0.4s ease;
+            transition: all 0.5s ease;
             transform: translateY(20px);
+            max-width: 280px;
         }
 
         .panel:hover .description {
             max-height: 200px;
             opacity: 1;
             transform: translateY(0);
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
 
         /* Bouton Jouer */
         .btn-play {
             margin-top: 0;
-            padding: 0.8rem 3rem;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.6);
+            padding: 0.8rem 2.5rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.4);
             color: white;
             font-family: 'Inter', sans-serif;
             text-transform: uppercase;
             letter-spacing: 2px;
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 0.8rem;
             opacity: 0;
             transform: translateY(30px);
             transition: all 0.3s ease 0.1s;
+            position: relative;
+            overflow: hidden;
         }
         
         .panel:hover .btn-play {
             opacity: 1;
             transform: translateY(0);
-            margin-top: 2.5rem;
+            margin-top: 2rem;
         }
+        
+        .btn-play::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-play:hover::after { left: 100%; }
         
         .btn-play:hover {
             background: white;
             color: black;
-            box-shadow: 0 0 30px rgba(255,255,255,0.6);
-            transform: scale(1.05);
+            box-shadow: 0 0 25px currentColor;
         }
 
-        /* --- STYLES SPÉCIFIQUES --- */
+        /* --- COULEURS SPÉCIFIQUES --- */
         
-        /* Regicide */
-        .regicide .panel-bg {
-            background-image: radial-gradient(circle at center, var(--color-regicide), #450a0a);
-        }
-        .regicide:hover { border-color: var(--color-regicide); }
-        .regicide h2 { color: var(--color-regicide); }
-        .regicide .icon-box { color: var(--color-regicide); }
+        /* Helper pour colorer les éléments dynamiquement */
+        .panel[data-theme="regicide"] { --theme: var(--color-regicide); }
+        .panel[data-theme="scoundrel"] { --theme: var(--color-scoundrel); }
+        .panel[data-theme="gridcannon"] { --theme: var(--color-gridcannon); }
+        .panel[data-theme="isaludo"] { --theme: var(--color-isaludo); }
+        .panel[data-theme="chess"] { --theme: var(--color-chess); }
+        .panel[data-theme="locked"] { --theme: var(--color-locked); }
 
-        /* Scoundrel */
-        .scoundrel .panel-bg {
-            background-image: radial-gradient(circle at center, var(--color-scoundrel), #064e3b);
-        }
-        .scoundrel:hover { border-color: var(--color-scoundrel); }
-        .scoundrel h2 { color: var(--color-scoundrel); }
-        .scoundrel .icon-box { color: var(--color-scoundrel); }
+        .panel .panel-bg { background-image: radial-gradient(circle at center, var(--theme), #020617); }
+        .panel:hover { border-color: var(--theme); }
+        .panel h2 { color: var(--theme); }
+        .panel .icon-box { color: var(--theme); }
+        .panel .btn-play { color: white; border-color: rgba(255,255,255,0.5); }
+        .panel .btn-play:hover { color: #000; background: var(--theme); box-shadow: 0 0 30px var(--theme); border-color: var(--theme); }
 
-        /* Locked / Coming Soon */
-        .locked { cursor: not-allowed; }
-        .locked .panel-bg {
-            background-image: radial-gradient(circle at center, var(--color-locked), #1e293b);
-            filter: grayscale(1);
-        }
-        .locked:hover { flex: 1.5; /* S'ouvre moins */ }
-        .locked h2 { color: var(--color-locked); }
 
-        
         /* --- RESPONSIVE MOBILE --- */
-        @media (max-width: 768px) {
-            .sound-toggle { top: 15px; right: 15px; width: 40px; height: 40px; }
-            .accordion {
-                flex-direction: column;
-                width: 100%;
-                margin-left: 0;
-            }
-            .panel {
-                width: 100%;
-                transform: none; /* Pas de skew sur mobile */
-                border-right: none;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
-            }
-            .panel-bg {
-                transform: none;
-                top: 0; left: 0; right: 0; bottom: 0;
-            }
-            .panel:hover .panel-bg {
-                transform: scale(1.1);
-            }
-            .content-wrapper {
-                transform: none;
-            }
-            .panel:hover .content-wrapper {
-                transform: scale(1.05);
-            }
-            
-            /* Sur mobile, on affiche un peu plus d'infos par défaut */
+        @media (max-width: 850px) {
+            .accordion { flex-direction: column; width: 100%; margin-left: 0; }
+            .panel { width: 100%; transform: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .panel-bg, .content-wrapper, .panel:hover .panel-bg, .panel:hover .content-wrapper { transform: none !important; }
+            .panel:hover { flex: 2; }
             h2 { font-size: 1.5rem; }
-            .icon-box i { width: 32px; height: 32px; }
+            .ui-controls { top: 15px; right: 15px; }
+            .icon-box i { width: 40px; height: 40px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- BOUTON SON -->
-    <button id="soundToggle" class="sound-toggle" title="Activer/Désactiver le son">
-        <i data-lucide="volume-x" width="24" height="24"></i>
-    </button>
+    <!-- UI CONTROLS -->
+    <div class="ui-controls">
+        <button id="soundToggle" class="icon-btn" title="Activer/Désactiver le son">
+            <i data-lucide="volume-x" width="20" height="20"></i>
+        </button>
+    </div>
 
     <div class="accordion">
         
         <!-- JEU 1 : REGICIDE -->
-        <a href="regicide.html" class="panel regicide">
-            <div class="panel-bg"></div> <!-- Fond animé -->
+        <a href="regicide.html" class="panel" data-theme="regicide">
+            <div class="panel-bg"></div>
             <div class="content-wrapper">
-                <div class="icon-box">
-                    <i data-lucide="crown" width="64" height="64" stroke-width="1.5"></i>
-                </div>
+                <div class="icon-box"><i data-lucide="crown" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Coopération</div>
                 <h2>Regicide</h2>
                 <div class="description">
-                    <p>Un jeu de cartes coopératif brutal.</p>
-                    <p>Unissez vos forces, jouez vos combos et abattez la monarchie corrompue.</p>
+                    <p>Un jeu de combat brutal contre la royauté.</p>
                 </div>
                 <div class="btn-play">Jouer</div>
             </div>
         </a>
 
         <!-- JEU 2 : SCOUNDREL -->
-        <a href="scoundrel.html" class="panel scoundrel">
+        <a href="scoundrel.html" class="panel" data-theme="scoundrel">
             <div class="panel-bg"></div>
             <div class="content-wrapper">
-                <div class="icon-box">
-                    <i data-lucide="skull" width="64" height="64" stroke-width="1.5"></i>
-                </div>
+                <div class="icon-box"><i data-lucide="skull" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Rogue-like</div>
                 <h2>Scoundrel</h2>
                 <div class="description">
-                    <p>Un donjon solo minimaliste.</p>
-                    <p>Gérez votre deck comme un inventaire. Chaque carte est une arme ou un danger.</p>
+                    <p>Gérez votre deck comme un inventaire.</p>
                 </div>
                 <div class="btn-play">Jouer</div>
             </div>
         </a>
 
-        <!-- JEU 3 : BIENTÔT -->
-        <div class="panel locked">
+        <!-- JEU 3 : GRID CANNON -->
+        <a href="gridcannon.html" class="panel" data-theme="gridcannon">
             <div class="panel-bg"></div>
             <div class="content-wrapper">
-                <div class="icon-box">
-                    <i data-lucide="plus" width="64" height="64" stroke-width="1.5"></i>
-                </div>
-                <h2>Bientôt</h2>
+                <div class="icon-box"><i data-lucide="grid-3x3" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Stratégie</div>
+                <h2>Grid Cannon</h2>
                 <div class="description">
-                    <p>De nouvelles aventures sont en préparation.</p>
-                    <p>Revenez plus tard pour découvrir d'autres classiques.</p>
+                    <p>Un solitaire tactique sur une grille.</p>
                 </div>
+                <div class="btn-play">Jouer</div>
+            </div>
+        </a>
+
+        <!-- JEU 4 : ISALUDO -->
+        <a href="isaludo.html" class="panel" data-theme="isaludo">
+            <div class="panel-bg"></div>
+            <div class="content-wrapper">
+                <div class="icon-box"><i data-lucide="swords" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Bataille</div>
+                <h2>Isaludo</h2>
+                <div class="description">
+                    <p>Affrontez vos ennemis dans ce solitaire médiéval.</p>
+                </div>
+                <div class="btn-play">Jouer</div>
+            </div>
+        </a>
+
+        <!-- JEU 5 : CHESS PUZZLES (Nouveau) -->
+        <a href="lichesspuzzles.html" class="panel" data-theme="chess">
+            <div class="panel-bg"></div>
+            <div class="content-wrapper">
+                <!-- Icone Castle pour Tour/Rook -->
+                <div class="icon-box"><i data-lucide="castle" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Tactique</div>
+                <h2>Échecs</h2>
+                <div class="description">
+                    <p>Résolvez des énigmes complexes pour mater le roi.</p>
+                </div>
+                <div class="btn-play">Jouer</div>
+            </div>
+        </a>
+
+        <!-- SLOT VIDE / BIENTÔT -->
+        <div class="panel" data-theme="locked">
+            <div class="panel-bg"></div>
+            <div class="content-wrapper">
+                <div class="icon-box"><i data-lucide="plus" width="32" height="32" stroke-width="1.5"></i></div>
+                <h2>...</h2>
             </div>
         </div>
 
@@ -363,105 +403,84 @@
         // Initialisation des icônes
         lucide.createIcons();
 
-        /* --- SYSTÈME AUDIO ARCADE (Procedural) --- */
+        /* --- SYSTÈME AUDIO PROCEDURAL --- */
         const soundToggleBtn = document.getElementById('soundToggle');
         const icon = soundToggleBtn.querySelector('i');
-        
         let audioCtx = null;
         let isMuted = true;
 
-        // Fonction pour initialiser l'AudioContext (nécessaire après interaction user)
         function initAudio() {
             if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // Son Glitch/Hover (Aigu, Rapide, Nerveux)
+        // Son Glitch/Hover
         function playHoverSound() {
             if (isMuted || !audioCtx) return;
-
             const t = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
-            // Type Sawtooth pour le côté "électrique"
-            osc.type = 'sawtooth';
             
-            // Slide de fréquence rapide (Chirp)
-            osc.frequency.setValueAtTime(600, t);
-            osc.frequency.exponentialRampToValueAtTime(1200, t + 0.05);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, t);
+            osc.frequency.exponentialRampToValueAtTime(1400, t + 0.05);
+            
+            gain.gain.setValueAtTime(0.04, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1200;
 
-            // Enveloppe de volume ultra courte
-            gain.gain.setValueAtTime(0.05, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-
-            osc.connect(gain);
+            osc.connect(filter);
+            filter.connect(gain);
             gain.connect(audioCtx.destination);
             
             osc.start(t);
             osc.stop(t + 0.1);
         }
 
-        // Son Click/Select (Impact, Basse, Confirmation)
+        // Son Click
         function playClickSound() {
             if (isMuted || !audioCtx) return;
-
             const t = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
-            // Onde carrée pour le "punch" rétro
-            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
             
-            // Drop de fréquence (Pew/Boom)
-            osc.frequency.setValueAtTime(250, t);
-            osc.frequency.exponentialRampToValueAtTime(50, t + 0.2);
-
-            // Enveloppe un peu plus longue
-            gain.gain.setValueAtTime(0.1, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
             osc.start(t);
-            osc.stop(t + 0.2);
+            osc.stop(t + 0.5);
         }
 
-        // Son Boot/Activation
         function playBootSound() {
             if (!audioCtx) return;
             const t = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(220, t);
-            osc.frequency.setValueAtTime(440, t + 0.1);
-            osc.frequency.setValueAtTime(880, t + 0.2);
-            
-            gain.gain.setValueAtTime(0.05, t);
+            osc.frequency.linearRampToValueAtTime(880, t + 0.3);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.1, t + 0.1);
             gain.gain.linearRampToValueAtTime(0, t + 0.4);
-            
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
             osc.start(t);
             osc.stop(t + 0.4);
         }
 
-        // --- GESTIONNAIRES D'ÉVÉNEMENTS ---
-
-        // Toggle Mute/Unmute
         soundToggleBtn.addEventListener('click', () => {
             initAudio();
             isMuted = !isMuted;
-
             if (!isMuted) {
                 soundToggleBtn.classList.add('active');
                 icon.setAttribute('data-lucide', 'volume-2');
@@ -473,25 +492,10 @@
             lucide.createIcons();
         });
 
-        // Attachement aux panels
-        const panels = document.querySelectorAll('.panel');
-
-        panels.forEach(panel => {
-            // Son au survol
-            panel.addEventListener('mouseenter', () => {
-                if(!panel.classList.contains('locked')) {
-                    playHoverSound();
-                }
-            });
-
-            // Son au click (mousedown pour être sûr qu'il se lance avant la nav)
-            panel.addEventListener('mousedown', () => {
-                if(!panel.classList.contains('locked')) {
-                    playClickSound();
-                }
-            });
+        document.querySelectorAll('.panel').forEach(panel => {
+            panel.addEventListener('mouseenter', () => !panel.dataset.theme.includes('locked') && playHoverSound());
+            panel.addEventListener('mousedown', () => !panel.dataset.theme.includes('locked') && playClickSound());
         });
-
     </script>
 </body>
 </html>
