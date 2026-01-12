@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lichess Tactiques V12 - API Fix</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
+
     <!-- Chessboard.js CSS -->
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -26,8 +27,15 @@
         }
 
         /* Thème Bleu */
-        .white-1e1d7 { background-color: #f0f9ff; color: #3b82f6; }
-        .black-3c85d { background-color: #60a5fa; color: #f0f9ff; }
+        .white-1e1d7 {
+            background-color: #f0f9ff;
+            color: #3b82f6;
+        }
+
+        .black-3c85d {
+            background-color: #60a5fa;
+            color: #f0f9ff;
+        }
 
         /* Case sélectionnée (Vert) */
         .highlight-selected {
@@ -38,8 +46,9 @@
         .highlight-move {
             background-color: rgba(255, 255, 0, 0.5) !important;
         }
+
         .black-3c85d.highlight-move {
-            background-color: #a3e635 !important; 
+            background-color: #a3e635 !important;
         }
 
         /* Indication Aide (Violet) */
@@ -49,9 +58,17 @@
         }
 
         @keyframes pulse-purple {
-            0% { box-shadow: inset 0 0 0 4px #a855f7; }
-            50% { box-shadow: inset 0 0 0 8px #d8b4fe; }
-            100% { box-shadow: inset 0 0 0 4px #a855f7; }
+            0% {
+                box-shadow: inset 0 0 0 4px #a855f7;
+            }
+
+            50% {
+                box-shadow: inset 0 0 0 8px #d8b4fe;
+            }
+
+            100% {
+                box-shadow: inset 0 0 0 4px #a855f7;
+            }
         }
 
         /* Effet de flou pour les infos cachées */
@@ -61,7 +78,7 @@
             pointer-events: none;
             user-select: none;
         }
-        
+
         .info-transition {
             transition: filter 0.5s ease, opacity 0.5s ease;
         }
@@ -73,30 +90,34 @@
         }
     </style>
 </head>
+
 <body class="bg-slate-900 text-white h-screen flex flex-col font-sans overflow-hidden">
 
     <!-- HEADER: Infos Puzzle -->
     <div class="w-full bg-slate-800 shadow-md z-10 p-3 flex-none border-b border-slate-700">
         <div class="flex justify-between items-center max-w-md mx-auto relative">
-            
+
             <div class="flex items-center space-x-2">
                 <i class="fas fa-chess-knight text-blue-400 text-xl"></i>
                 <h1 class="font-bold text-lg">Tactiques</h1>
             </div>
 
             <!-- Indicateur Mode Démo (Caché par défaut) -->
-            <div id="demo-badge" class="hidden absolute left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-400 animate-pulse">
+            <div id="demo-badge"
+                class="hidden absolute left-1/2 transform -translate-x-1/2 bg-orange-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-400 animate-pulse">
                 MODE DÉMO
             </div>
-            
+
             <div class="flex items-center space-x-3">
                 <!-- Bouton Révéler Infos -->
-                <button id="toggle-info-btn" class="text-slate-400 hover:text-white transition p-2" title="Afficher/Masquer les infos">
+                <button id="toggle-info-btn" class="text-slate-400 hover:text-white transition p-2"
+                    title="Afficher/Masquer les infos">
                     <i id="info-icon" class="fas fa-eye-slash"></i>
                 </button>
 
                 <!-- Rating (Caché par défaut) -->
-                <div id="rating-container" class="bg-slate-700 px-3 py-1 rounded-full flex items-center space-x-2 border border-slate-600 info-transition blur-info">
+                <div id="rating-container"
+                    class="bg-slate-700 px-3 py-1 rounded-full flex items-center space-x-2 border border-slate-600 info-transition blur-info">
                     <i class="fas fa-trophy text-yellow-400 text-sm"></i>
                     <span id="puzzle-rating" class="font-mono font-bold text-yellow-100">---</span>
                 </div>
@@ -106,11 +127,12 @@
 
     <!-- MAIN: Echiquier + Infos Jeu -->
     <div class="flex-grow flex flex-col justify-center items-center w-full max-w-md mx-auto px-2 relative">
-        
+
         <!-- Adversaire -->
         <div class="w-full flex justify-between items-end mb-2 px-1 relative z-0">
             <div class="flex items-center space-x-2 opacity-80">
-                <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center border border-red-400/50">
+                <div
+                    class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center border border-red-400/50">
                     <i class="fas fa-robot text-red-400"></i>
                 </div>
                 <div class="flex flex-col leading-tight">
@@ -119,13 +141,15 @@
                 </div>
             </div>
             <!-- Indicateur de tour (Haut) -->
-            <div id="top-indicator" class="hidden px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded animate-pulse">
+            <div id="top-indicator"
+                class="hidden px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded animate-pulse">
                 À son tour
             </div>
         </div>
 
         <!-- Zone de message flottante -->
-        <div id="status-message" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-2 rounded-full font-bold shadow-2xl transition-all duration-300 opacity-0 -translate-y-4 pointer-events-none whitespace-nowrap border border-white/10 bg-slate-800/95 backdrop-blur text-sm">
+        <div id="status-message"
+            class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-2 rounded-full font-bold shadow-2xl transition-all duration-300 opacity-0 -translate-y-4 pointer-events-none whitespace-nowrap border border-white/10 bg-slate-800/95 backdrop-blur text-sm">
             Message
         </div>
 
@@ -135,7 +159,8 @@
         <!-- Joueur (Vous) -->
         <div class="w-full flex justify-between items-start mt-2 px-1">
             <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center border border-green-400/50">
+                <div
+                    class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center border border-green-400/50">
                     <i class="fas fa-user text-green-400"></i>
                 </div>
                 <div class="flex flex-col leading-tight">
@@ -143,8 +168,9 @@
                     <span id="bottom-player-rating" class="text-xs text-gray-400 font-mono"></span>
                 </div>
             </div>
-             <!-- Indicateur de tour (Bas) -->
-             <div id="bottom-indicator" class="hidden px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+            <!-- Indicateur de tour (Bas) -->
+            <div id="bottom-indicator"
+                class="hidden px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]">
                 À votre tour
             </div>
         </div>
@@ -152,8 +178,9 @@
     </div>
 
     <!-- FOOTER: Thèmes & Contrôles -->
-    <div class="w-full bg-slate-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 p-4 flex-none border-t border-slate-700">
-        
+    <div
+        class="w-full bg-slate-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 p-4 flex-none border-t border-slate-700">
+
         <!-- Thèmes du puzzle (Cachés par défaut) -->
         <div id="themes-container" class="info-transition blur-info">
             <div id="puzzle-themes" class="flex flex-wrap gap-1 mb-4 justify-center max-w-md mx-auto min-h-[1.5rem]">
@@ -164,17 +191,22 @@
         <!-- Boutons -->
         <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
             <!-- Bouton Aide / Solution -->
-            <button id="help-btn" class="col-span-1 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow flex flex-col items-center justify-center disabled:opacity-40 disabled:saturate-0" title="Aide">
+            <button id="help-btn"
+                class="col-span-1 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow flex flex-col items-center justify-center disabled:opacity-40 disabled:saturate-0"
+                title="Aide">
                 <i id="help-icon" class="fas fa-question-circle mb-1 text-xl"></i>
                 <span id="help-text" class="text-[10px] uppercase tracking-wider">Aide</span>
             </button>
-            
-            <button id="retry-btn" class="col-span-1 bg-slate-600 hover:bg-slate-500 active:bg-slate-700 text-white font-bold py-3 rounded-xl transition shadow flex flex-col items-center justify-center disabled:opacity-40 disabled:saturate-0" title="Réessayer">
+
+            <button id="retry-btn"
+                class="col-span-1 bg-slate-600 hover:bg-slate-500 active:bg-slate-700 text-white font-bold py-3 rounded-xl transition shadow flex flex-col items-center justify-center disabled:opacity-40 disabled:saturate-0"
+                title="Réessayer">
                 <i class="fas fa-undo mb-1 text-xl"></i>
                 <span class="text-[10px] uppercase tracking-wider">Reset</span>
             </button>
-            
-            <button id="next-btn" class="col-span-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow flex items-center justify-center space-x-2 disabled:opacity-40 disabled:bg-slate-700 disabled:text-gray-500">
+
+            <button id="next-btn"
+                class="col-span-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow flex items-center justify-center space-x-2 disabled:opacity-40 disabled:bg-slate-700 disabled:text-gray-500">
                 <span>Suivant</span>
                 <i class="fas fa-arrow-right"></i>
             </button>
@@ -200,11 +232,11 @@
             if (!audioCtx) return;
 
             const now = audioCtx.currentTime;
-            
+
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
-            
+
             filter.type = 'lowpass';
             osc.connect(filter);
             filter.connect(gainNode);
@@ -262,7 +294,7 @@
                 "game": {
                     "id": "O8sz7nS8",
                     "pgn": "d4 d5 c4 e6 Nc3 Bb4 Nf3 Nf6 e3 Ne4 Qc2 c6 Bd3 f5 O-O O-O Ne5 Nd7 Nxd7 Bxd7 f3 Nxc3 bxc3 Bd6 e4 fxe4 fxe4 dxe4 Bxe4",
-                    "players": [ { "name": "euphrates7", "rating": 1988, "color": "white" }, { "name": "ahmadsoltani", "rating": 1927, "color": "black" } ]
+                    "players": [{ "name": "euphrates7", "rating": 1988, "color": "white" }, { "name": "ahmadsoltani", "rating": 1927, "color": "black" }]
                 },
                 "puzzle": {
                     "id": "f8M0Z", "rating": 1939, "solution": ["d6h2", "g1h2", "f8f1", "e4h7", "g8h8"],
@@ -273,7 +305,7 @@
                 "game": {
                     "id": "BMh79XZA",
                     "pgn": "e4 e6 d4 g6 Be3 Bg7 Qd2 Ne7 h4 h5 Nc3 d5 O-O-O dxe4 Nxe4 b6 Nh3 Bb7 Neg5 Nf5 Nf4 Nxe3 fxe3 O-O Bc4 Re8 Qe2 Bh6 g4 Bxg5 hxg5 Bxh1 Rxh1 Qxg5 gxh5 Qh6 Qg2 g5 Nh3 Nd7 Nxg5 Kf8 Rf1 f5 Bxe6 Ke7 Qc6 Rad8 Rxf5 Rf8 Bxd7",
-                    "players": [ { "name": "Arxeuz", "rating": 2063, "color": "white" }, { "name": "CarlosAguilar", "rating": 2109, "color": "black" } ]
+                    "players": [{ "name": "Arxeuz", "rating": 2063, "color": "white" }, { "name": "CarlosAguilar", "rating": 2109, "color": "black" }]
                 },
                 "puzzle": {
                     "id": "Ai8r1", "rating": 1583, "solution": ["h6c6", "d7c6", "f8f5"],
@@ -293,6 +325,7 @@
         let hintState = 0;
         let statusTimeout = null;
         let isInfoVisible = false;
+        let isDragClick = false; // Bloque le double événement (Drag+Click) sur PC
 
         // --- DOM Elements ---
         const els = {
@@ -317,12 +350,12 @@
             demoBadge: document.getElementById('demo-badge')
         };
 
-        $(document).ready(function() {
+        $(document).ready(function () {
             initBoard();
             attachEvents();
             fetchPuzzles(); // Appel API au démarrage
-            
-            $(document).on('click touchstart', function() {
+
+            $(document).on('click touchstart', function () {
                 initAudio();
             });
         });
@@ -346,8 +379,11 @@
             $('#help-btn').on('click', handleHelpClick);
             $('#toggle-info-btn').on('click', toggleInfo);
 
-            $('#myBoard').on('click', '.square-55d63', function() {
+            $('#myBoard').on('click', '.square-55d63', function () {
                 if (!isPuzzleActive) return;
+                // Protection PC : Si onDrop a déjà géré l'action, on ignore ce clic
+                if (isDragClick) return;
+
                 const square = $(this).attr('data-square');
                 handleSquareClick(square);
             });
@@ -363,9 +399,9 @@
                 // Requête API pour 50 puzzles "harder"
                 const response = await fetch('https://lichess.org/api/puzzle/batch/mix?difficulty=harder&nb=50');
                 if (!response.ok) throw new Error("Erreur réseau");
-                
+
                 const data = await response.json();
-                
+
                 // Gérer les deux formats possibles de l'API batch
                 let newPuzzles = [];
                 if (Array.isArray(data)) {
@@ -374,7 +410,7 @@
                     // Si l'API renvoie un objet wrapper { puzzles: [...] }
                     newPuzzles = data.puzzles;
                 }
-                
+
                 if (newPuzzles.length > 0) {
                     puzzles = newPuzzles;
                     currentPuzzleIndex = -1;
@@ -506,7 +542,7 @@
             game.reset();
             const pgn = puzzleData.game.pgn;
             const initialPly = puzzleData.puzzle.initialPly;
-            
+
             if (!game.load_pgn(pgn)) {
                 showStatus("Erreur PGN", "error");
                 setTimeout(nextPuzzle, 1000);
@@ -544,10 +580,10 @@
 
             els.rating.innerText = puzzleData.puzzle.rating;
             renderThemes(puzzleData.puzzle.themes);
-            
-            const whiteP = puzzleData.game.players.find(p => p.color === 'white') || {name:'?',rating:'?'};
-            const blackP = puzzleData.game.players.find(p => p.color === 'black') || {name:'?',rating:'?'};
-            
+
+            const whiteP = puzzleData.game.players.find(p => p.color === 'white') || { name: '?', rating: '?' };
+            const blackP = puzzleData.game.players.find(p => p.color === 'black') || { name: '?', rating: '?' };
+
             if (orientation === 'white') {
                 updatePlayerInfos(whiteP, blackP);
             } else {
@@ -559,7 +595,7 @@
             els.nextBtn.disabled = true;
             els.retryBtn.disabled = false;
             els.helpBtn.disabled = false;
-            
+
             hideStatus();
         }
 
@@ -572,7 +608,7 @@
 
         function renderThemes(themes) {
             els.themes.innerHTML = '';
-            if(!themes) return;
+            if (!themes) return;
             themes.forEach(theme => {
                 const span = document.createElement('span');
                 const fmtTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
@@ -603,12 +639,12 @@
 
             if (uciMove === currentSolution[0]) {
                 currentSolution.shift();
-                
+
                 board.position(game.fen());
                 highlightLastMove(source, target);
-                clearHints(); 
+                clearHints();
                 playSound('move');
-                
+
                 if (currentSolution.length === 0) {
                     playSound('win');
                     winPuzzle();
@@ -629,7 +665,7 @@
 
         function playOpponentResponse() {
             if (currentSolution.length === 0) return;
-            
+
             const uciMove = currentSolution[0];
             const source = uciMove.substring(0, 2);
             const target = uciMove.substring(2, 4);
@@ -640,14 +676,14 @@
             highlightLastMove(source, target);
             playSound('move');
             currentSolution.shift();
-            
+
             updateTurnIndicator();
         }
 
         function winPuzzle() {
             isPuzzleActive = false;
             showStatus("Gagné !", "success");
-            
+
             isInfoVisible = true;
             updateInfoVisibility();
 
@@ -666,7 +702,13 @@
         }
 
         function onDrop(source, target) {
-            if (source === target) { handleSquareClick(source); return; }
+            if (source === target) {
+                // C'est un clic sur PC !
+                isDragClick = true;
+                setTimeout(() => isDragClick = false, 50); // Reset rapide
+                handleSquareClick(source);
+                return;
+            }
             const result = attemptMove(source, target);
             if (!result) return 'snapback';
         }
@@ -689,4 +731,5 @@
         }
     </script>
 </body>
+
 </html>
