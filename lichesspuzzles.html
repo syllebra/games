@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lichess Tactiques V21 - Batch API Fix</title>
+    <title>Lichess Tactiques V22 - Dashboard Stats</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -537,10 +537,43 @@
 
         function renderThemeStats(global, themes) {
             els.themesStatsList.innerHTML = '';
-            Object.entries(themes).sort(([, a], [, b]) => b.performance - a.performance).forEach(([key, data]) => {
-                const wr = Math.round((data.results.nbWins / data.results.nbGames) * 100);
-                const tn = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim();
-                els.themesStatsList.insertAdjacentHTML('beforeend', `<div class="p-3 flex items-center justify-between hover:bg-slate-700/50 transition"><div><div class="font-bold text-sm text-gray-200">${tn}</div><div class="text-[10px] text-gray-500">${data.results.nbGames} puzzles</div></div><div class="text-right"><div class="text-blue-400 font-mono font-bold">${data.performance}</div><div class="text-[10px] ${wr >= 50 ? 'text-green-400' : 'text-red-400'}">${wr}% réussite</div></div></div>`);
+            
+            // Stats globales (30 jours)
+            if(global) {
+                 const gNb = global.nb;
+                 const gPerf = global.performance;
+                 const gWin = global.firstWins;
+                 const gWr = gNb > 0 ? Math.round((gWin/gNb)*100) : 0;
+                 
+                 els.themesStatsList.insertAdjacentHTML('beforeend', `
+                    <div class="p-3 bg-slate-700/30 border-b border-slate-700 flex items-center justify-between">
+                        <div><div class="font-bold text-sm text-yellow-400">Global (30 jours)</div></div>
+                        <div class="text-right">
+                            <span class="text-blue-400 font-mono font-bold mr-2">${gPerf}</span>
+                            <span class="text-[10px] ${gWr >= 50 ? 'text-green-400' : 'text-red-400'}">${gWr}% (${gNb})</span>
+                        </div>
+                    </div>
+                 `);
+            }
+
+            // Stats par thème
+            Object.entries(themes).sort(([, a], [, b]) => b.results.performance - a.results.performance).forEach(([key, data]) => {
+                const res = data.results;
+                const wr = res.nb > 0 ? Math.round((res.firstWins / res.nb) * 100) : 0;
+                // Use provided theme name or beautify key
+                const tn = data.theme || key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim();
+                
+                els.themesStatsList.insertAdjacentHTML('beforeend', `
+                    <div class="p-3 flex items-center justify-between hover:bg-slate-700/50 transition">
+                        <div>
+                            <div class="font-bold text-sm text-gray-200">${tn}</div>
+                            <div class="text-[10px] text-gray-500">${res.nb} puzzles</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-blue-400 font-mono font-bold">${res.performance}</div>
+                            <div class="text-[10px] ${wr >= 50 ? 'text-green-400' : 'text-red-400'}">${wr}% réussite</div>
+                        </div>
+                    </div>`);
             });
         }
 
