@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lichess Tactiques V25 - Puzzles Default</title>
+    <title>Lichess Tactiques V27 - Replay by Theme</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -263,7 +263,10 @@
                     </div>
 
                     <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                        <h3 class="text-sm font-bold text-gray-300 p-4 border-b border-slate-700 bg-slate-800/50">Performance par Thème (30j)</h3>
+                        <div class="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-gray-300">Performance par Thème (30j)</h3>
+                            <div class="text-[10px] text-slate-400 italic">Cliquez sur un thème pour réviser</div>
+                        </div>
                         <div id="themes-stats-list" class="divide-y divide-slate-700 max-h-64 overflow-y-auto custom-scrollbar"></div>
                     </div>
                     <button id="logout-btn" class="w-full py-2 text-red-400 text-sm hover:bg-slate-800 rounded border border-slate-700 transition">Se déconnecter</button>
@@ -397,6 +400,8 @@
             $('#stats-type-select').on('change', function() {
                 renderChartForType(this.value);
             });
+            
+            // Replay listener handled in renderThemeStats
         }
 
         async function checkUserAuth() {
@@ -548,6 +553,54 @@
 
             } catch(e){ console.warn("Erreur Historique", e); }
         }
+        
+        // --- LOGIQUE REVIEW FAILED PAR THEME ---
+        async function loadThemeReplay(themeKey) {
+            if (!userToken) return alert("Vous devez être connecté.");
+            
+            showStatus("Recherche erreurs...", "info");
+            try {
+                // 1. Fetch Replay IDs (30 days)
+                const res = await fetch(`https://lichess.org/api/puzzle/replay/30/${themeKey}`, {
+                    headers: { 'Authorization': `Bearer ${userToken}` }
+                });
+                
+                if (!res.ok) throw new Error("Erreur récupération.");
+                const data = await res.json();
+                
+                // L'API renvoie { replay: { remaining: [...] } }
+                const idsToLoad = data.replay && data.replay.remaining ? data.replay.remaining : [];
+
+                if (idsToLoad.length === 0) {
+                    alert("Aucune erreur à revoir pour ce thème (30 jours) !");
+                    hideStatus();
+                    return;
+                }
+
+                showStatus(`Chargement ${idsToLoad.length} puzzles...`, "info");
+
+                // 2. Fetch Details (Limit if needed, but replay list is usually short)
+                // On charge les puzzles un par un
+                const promises = idsToLoad.map(id => fetch(`https://lichess.org/api/puzzle/${id}`).then(r => r.json()));
+                
+                const loadedPuzzles = await Promise.all(promises);
+                
+                if (loadedPuzzles.length > 0) {
+                    puzzles = loadedPuzzles;
+                    currentPuzzleIndex = -1;
+                    
+                    // Close modal & Start
+                    $('#user-modal').addClass('hidden');
+                    nextPuzzle();
+                    showStatus(`${loadedPuzzles.length} erreurs chargées`, "success");
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Erreur lors du chargement des erreurs.");
+                hideStatus();
+            }
+        }
 
         function renderChartForType(type) {
             const data = userRatingHistory.find(x => x.name === type);
@@ -622,8 +675,10 @@
                  const gWin = global.firstWins;
                  const gWr = gNb > 0 ? Math.round((gWin/gNb)*100) : 0;
                  
+                 // Ligne Global cliquable -> theme "mix"
                  els.themesStatsList.insertAdjacentHTML('beforeend', `
-                    <div class="p-4 bg-slate-700/50 border-b border-slate-600 mb-2">
+                    <div class="p-4 bg-slate-700/50 border-b border-slate-600 mb-2 cursor-pointer hover:bg-slate-700 transition relative group" onclick="loadThemeReplay('mix')">
+                        <div class="absolute top-2 right-2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-play-circle mr-1"></i>Rejouer erreurs</div>
                         <div class="flex justify-between items-end mb-2">
                             <div>
                                 <div class="text-xs text-slate-400 uppercase font-bold tracking-wider">Global (30j)</div>
@@ -652,10 +707,14 @@
                 if(wr >= 50) barColor = 'bg-yellow-500';
                 if(wr >= 70) barColor = 'bg-green-500';
 
+                // Ligne Thème cliquable -> theme key
                 els.themesStatsList.insertAdjacentHTML('beforeend', `
-                    <div class="p-3 hover:bg-slate-700/30 transition border-b border-slate-700/50 last:border-0">
+                    <div class="p-3 hover:bg-slate-700/50 transition border-b border-slate-700/50 last:border-0 cursor-pointer group relative" onclick="loadThemeReplay('${key}')">
+                        <div class="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-500 opacity-0 group-hover:opacity-100 transition mr-2">
+                             <i class="fas fa-redo-alt"></i>
+                        </div>
                         <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-sm text-slate-200">${tn}</span>
+                            <span class="font-bold text-sm text-slate-200 group-hover:text-blue-300 transition">${tn}</span>
                             <span class="text-xs font-mono text-blue-300 font-bold">${res.performance}</span>
                         </div>
                         <div class="flex items-center space-x-3">
