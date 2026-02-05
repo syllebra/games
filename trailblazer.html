@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trailblazer XL - Custom Graphics</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0d0015; font-family: 'Courier New', Courier, monospace; user-select: none; -webkit-user-select: none; touch-action: none; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* UI LAYER */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px; box-sizing: border-box;
+            color: white; text-shadow: 0 0 5px #00ffff;
+            z-index: 20;
+        }
+
+        #score-board {
+            font-size: 24px; font-weight: bold; display: flex; justify-content: space-between; width: 100%;
+            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* SETTINGS PANEL */
+        #settings-panel {
+            position: absolute;
+            top: 80px; left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px; border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            pointer-events: auto;
+            color: #00ffff; font-size: 12px;
+            display: flex; flex-direction: column; gap: 10px;
+            width: 200px;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+        .setting-row { display: flex; flex-direction: column; gap: 5px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        /* MODALES */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; z-index: 200;
+            background: rgba(13, 0, 21, 0.85);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-box {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255, 136, 0, 0.3);
+            box-shadow: 0 0 20px rgba(255, 136, 0, 0.1);
+            border-radius: 10px; padding: 30px; text-align: center;
+            width: 90%; max-width: 450px;
+        }
+
+        #level-list {
+            display: flex; flex-direction: column; gap: 10px; margin-top: 20px;
+            max-height: 50vh; overflow-y: auto; width: 100%; align-items: center;
+            -webkit-overflow-scrolling: touch; padding-bottom: 20px;
+        }
+
+        /* BOUTONS */
+        button.menu-btn {
+            background: linear-gradient(135deg, #ff8800, #ff0000);
+            color: white; border: none;
+            font-family: inherit; font-size: 18px; padding: 12px 30px;
+            cursor: pointer; text-transform: uppercase; font-weight: bold;
+            border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s; margin-top: 15px;
+        }
+        button.menu-btn:active { transform: scale(0.96); }
+
+        button.level-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 16px; width: 90%; max-width: 400px; padding: 15px; text-align: left;
+            color: #ffffff; box-shadow: none;
+        }
+        button.level-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: #ff8800; }
+
+        /* JAUGE VITESSE */
+        #speed-container {
+            position: absolute; right: 20px; bottom: 20px;
+            width: 12px; height: 150px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.5); border-radius: 6px; overflow: hidden;
+            display: flex; flex-direction: column-reverse;
+        }
+        #speed-bar {
+            width: 100%; height: 0%;
+            background: linear-gradient(to top, #00ff00, #ffff00, #ff0000);
+            transition: height 0.05s;
+        }
+
+        h1 { margin: 0; font-size: 40px; color: #fff; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; }
+        h2 { color: #ff8800; margin-bottom: 15px; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        #status-indicator {
+            position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);
+            font-size: 24px; color: #00ffff; font-weight: bold;
+            text-shadow: 0 0 10px #00ffff; display: none;
+            border: 2px solid #00ffff; padding: 10px 20px; border-radius: 8px;
+            background: rgba(0,0,0,0.7);
+        }
+
+        .hidden { display: none !important; }
+
+        #zone-left { position: absolute; left: 0; bottom: 0; width: 50%; height: 100%; pointer-events: none; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SAOShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/DepthLimitedBlurShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/UnpackDepthRGBAShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SAOPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/BokehShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/BokehPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/RGBShiftShader.js"></script>
+
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="score-board">
+            <span id="timer">00:00</span>
+            <span id="level-name">SELECT</span>
+        </div>
+        
+        <!-- SETTINGS UI -->
+        <div id="settings-panel">
+            <div class="setting-row">
+                <label>SSAO (Ombres):</label>
+                <input type="range" id="sao-intensity" min="0" max="0.5" step="0.01" value="0.03">
+            </div>
+            <div class="setting-row">
+                <label>Bloom (Éclat):</label>
+                <input type="range" id="bloom-strength" min="0" max="1" step="0.05" value="0.35">
+            </div>
+            <div class="setting-row">
+                <label>Vignette:</label>
+                <input type="range" id="vignette-darkness" min="0" max="2" step="0.1" value="1.0">
+            </div>
+            <div class="setting-row">
+                <label>Aberration:</label>
+                <input type="range" id="rgb-intensity" min="0" max="0.01" step="0.001" value="0.001">
+            </div>
+        </div>
+
+        <div id="status-indicator">⚠️ INVERSION ⚠️</div>
+        <div id="speed-container"><div id="speed-bar"></div></div>
+
+        <div id="screen-select" class="modal">
+            <h1>TRAILBLAZER</h1>
+            <h2>ULTRA XL</h2>
+            <div id="level-list"></div>
+        </div>
+
+        <div id="screen-ready" class="modal hidden">
+            <div class="modal-box">
+                <h1 id="ready-title">PRET ?</h1>
+                <p><strong>Gauche:</strong> Direction</p>
+                <p><strong>Droite:</strong> Vitesse & Saut</p>
+                <button id="btn-play" class="menu-btn">DÉMARRER</button>
+            </div>
+        </div>
+
+        <div id="screen-win" class="modal hidden">
+            <div class="modal-box">
+                <h1 style="color: #00ff00;">VICTOIRE</h1>
+                <p id="win-time">00:00</p>
+                <button id="btn-menu" class="menu-btn">MENU PRINCIPAL</button>
+            </div>
+        </div>
+        <div id="zone-left"></div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- DATA NIVEAUX ---
+        const P_BASE = ["ORORO","ROROR"];
+        const P_JUMP = ["BBBBB","     ","     ","BBBBB"];
+        const P_SPEED = ["OJOJO","JOJOJ"];
+        const P_SLOW = ["VOVOV","OVOVO"];
+        const P_INV = ["O C O","O U O"];
+        const LEVELS = [
+            { id: 1, name: "1. PROMENADE", data: [...repeat(P_BASE, 30), ...repeat(P_JUMP, 2), ...repeat(P_BASE, 50)] },
+            { id: 2, name: "2. AUTOROUTE", data: [...repeat(P_BASE, 10), ...repeat(P_SPEED, 30), ...repeat(P_BASE, 40)] },
+            { id: 3, name: "3. CHAOS", data: [...repeat(P_BASE, 10), ...repeat(P_INV, 5), ...repeat(P_JUMP, 2), ...repeat(P_SLOW, 20), ...repeat(P_BASE, 20)] }
+        ];
+
+        function repeat(p, c) { let res = []; for(let i=0; i<c; i++) res = res.concat(p); return res; }
+
+        // --- CONSTANTES ---
+        const TILE_WIDTH = 4, TILE_THICKNESS = 1.0, TILE_LENGTH = 10.0; 
+        const BALL_RADIUS = 0.6;
+        const LANE_COUNT = 5;
+        const BASE_SPEED = 60, MAX_SPEED = 140, MIN_SPEED = 10;
+        const GRAVITY = 400, JUMP_FORCE = 65; 
+
+        const PALETTE = {
+            'O': { color: 0xff8800 }, 'R': { color: 0xff1111 }, 
+            'V': { color: 0x11ff11 }, 'B': { color: 0xffffff }, 
+            'J': { color: 0xffff11 }, 'C': { color: 0x00ffff }, 
+            'U': { color: 0x2222ff }, ' ': null
+        };
+
+        let scene, camera, renderer, composer;
+        let bloomPass, saoPass, rgbShiftPass, vignettePass; 
+        let ball, ballMesh, levelMeshGroup, clock;
+        let gameState = 'LEVEL_SELECT';
+
+        let velocity = new THREE.Vector3(0, 0, 0), currentForwardSpeed = 0;
+        let isGrounded = false, controlsInverted = false, inversionTimer = 0;
+        let inputX = 0, inputSpeed = 0;
+        let accDeltaX = 0, accDeltaY = 0, touchLeftId = null, touchRightId = null, lastX=0, lastY=0;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a10); 
+            scene.fog = new THREE.Fog(0x0a0a10, 100, 1200); 
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 6, 10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, logarithmicDepthBuffer: true }); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+            dl.position.set(50, 100, 50); dl.castShadow = true;
+            dl.shadow.mapSize.width = 1024; dl.shadow.mapSize.height = 1024;
+            scene.add(dl);
+
+            setupPostProcessing();
+            createBall();
+            createEnvironment();
+            createLevelButtons();
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', (e) => handleKey(e, 1));
+            document.addEventListener('keyup', (e) => handleKey(e, 0));
+            container.addEventListener('touchstart', handleTouchStart, {passive:false});
+            container.addEventListener('touchmove', handleTouchMove, {passive:false});
+            container.addEventListener('touchend', handleTouchEnd);
+
+            // Settings Listeners
+            document.getElementById('sao-intensity').oninput = (e) => { saoPass.params.saoIntensity = parseFloat(e.target.value); };
+            document.getElementById('bloom-strength').oninput = (e) => { bloomPass.strength = parseFloat(e.target.value); };
+            document.getElementById('vignette-darkness').oninput = (e) => { vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); };
+            document.getElementById('rgb-intensity').oninput = (e) => { rgbShiftPass.uniforms['amount'].value = parseFloat(e.target.value); };
+
+            document.getElementById('btn-play').onclick = startGame;
+            document.getElementById('btn-menu').onclick = () => setScreen('LEVEL_SELECT');
+
+            clock = new THREE.Clock();
+            animate();
+        }
+
+        function setupPostProcessing() {
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+
+            saoPass = new THREE.SAOPass(scene, camera, false, true);
+            saoPass.params.saoIntensity = 0.03; 
+            saoPass.params.saoBias = 0.5; saoPass.params.saoScale = 10;
+            saoPass.params.saoKernelRadius = 20; saoPass.params.saoBlur = true;
+            composer.addPass(saoPass);
+
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.4, 0.85);
+            bloomPass.threshold = 0.7;
+            composer.addPass(bloomPass);
+
+            rgbShiftPass = new THREE.ShaderPass(THREE.RGBShiftShader);
+            rgbShiftPass.uniforms['amount'].value = 0.001; 
+            composer.addPass(rgbShiftPass);
+
+            vignettePass = new THREE.ShaderPass(THREE.VignetteShader);
+            vignettePass.uniforms["offset"].value = 1.1; 
+            vignettePass.uniforms["darkness"].value = 1.0;
+            composer.addPass(vignettePass);
+        }
+
+        function createBall() {
+            ball = new THREE.Group();
+            ballMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(BALL_RADIUS, 32, 32),
+                new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.2, clearcoat: 1.0 })
+            );
+            ballMesh.castShadow = true; ball.add(ballMesh);
+            scene.add(ball);
+        }
+
+        function createEnvironment() {
+            const grid = new THREE.GridHelper(3000, 150, 0x222233, 0x050505);
+            grid.position.y = -6; scene.add(grid);
+            
+            const sun = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa00, wireframe: true, transparent: true, opacity: 0.1 }));
+            sun.position.set(0, 80, -900); scene.add(sun);
+        }
+
+        function buildLevel() {
+            if(levelMeshGroup) scene.remove(levelMeshGroup);
+            levelMeshGroup = new THREE.Group();
+            
+            const shape = new THREE.Shape();
+            const w = (TILE_WIDTH - 0.7)/2, l = (TILE_LENGTH - 0.7)/2;
+            shape.moveTo(-w,-l); shape.lineTo(w,-l); shape.lineTo(w,l); shape.lineTo(-w,l); shape.lineTo(-w,-l);
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: TILE_THICKNESS, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 10 });
+            geo.rotateX(Math.PI/2);
+
+            const mats = {};
+            for(const k in PALETTE) if(PALETTE[k]) mats[k] = new THREE.MeshPhysicalMaterial({ color: PALETTE[k].color, roughness: 0.08, metalness: 0.15, clearcoat: 1.0 });
+
+            levelData.data.flat().forEach((row, ri) => {
+                for(let ci=0; ci<LANE_COUNT; ci++) {
+                    const char = row[ci];
+                    if(char && char !== ' ' && mats[char]) {
+                        const tile = new THREE.Mesh(geo, mats[char]);
+                        tile.position.set((ci-2)*TILE_WIDTH, -TILE_THICKNESS/2, -(ri*TILE_LENGTH));
+                        tile.receiveShadow = true; tile.castShadow = true;
+                        levelMeshGroup.add(tile);
+                    }
+                }
+            });
+            scene.add(levelMeshGroup);
+        }
+
+        function handleKey(e, v) {
+            if(e.code==='ArrowLeft') inputX = v ? -1 : 0;
+            if(e.code==='ArrowRight') inputX = v ? 1 : 0;
+            if(e.code==='ArrowUp') inputSpeed = v ? 1 : 0;
+            if(e.code==='ArrowDown') inputSpeed = v ? -1 : 0;
+            if(e.code==='Space' && v && isGrounded) velocity.y = JUMP_FORCE;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault(); const half = window.innerWidth/2;
+            for(let t of e.changedTouches) {
+                if(t.clientX < half && touchLeftId===null) { touchLeftId=t.identifier; lastX=t.clientX; }
+                else if(t.clientX >= half && touchRightId===null) { touchRightId=t.identifier; lastY=t.clientY; }
+            }
+        }
+        function handleTouchMove(e) {
+            for(let t of e.changedTouches) {
+                if(t.identifier===touchLeftId) { accDeltaX += t.clientX - lastX; lastX=t.clientX; }
+                if(t.identifier===touchRightId) { accDeltaY += t.clientY - lastY; lastY=t.clientY; }
+            }
+        }
+        function handleTouchEnd(e) {
+            for(let t of e.changedTouches) {
+                if(t.identifier===touchLeftId) { touchLeftId=null; accDeltaX=0; }
+                if(t.identifier===touchRightId) { if(Math.abs(accDeltaY)<5 && isGrounded) velocity.y = JUMP_FORCE; touchRightId=null; accDeltaY=0; }
+            }
+        }
+
+        function startGame() { 
+            ball.position.set(0, 5, 10); velocity.set(0,0,0); currentForwardSpeed = BASE_SPEED;
+            setScreen('PLAYING'); clock.start(); 
+        }
+
+        // FIX: winGame function was missing
+        function winGame() {
+            document.getElementById('win-time').innerText = clock.getElapsedTime().toFixed(2);
+            setScreen('WIN');
+        }
+
+        function setScreen(n) {
+            gameState = n;
+            document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+            if(n==='LEVEL_SELECT') document.getElementById('screen-select').classList.remove('hidden');
+            if(n==='MENU') document.getElementById('screen-ready').classList.remove('hidden');
+            if(n==='WIN') document.getElementById('screen-win').classList.remove('hidden');
+        }
+
+        function createLevelButtons() {
+            const list = document.getElementById('level-list');
+            LEVELS.forEach((l, i) => {
+                const b = document.createElement('button'); b.className='level-btn'; b.innerText = l.name;
+                b.onclick = () => { levelData = l; buildLevel(); document.getElementById('ready-title').innerText = l.name; setScreen('MENU'); };
+                list.appendChild(b);
+            });
+        }
+
+        function onWindowResize() { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.1);
+
+            if(gameState === 'PLAYING') {
+                currentForwardSpeed = THREE.MathUtils.clamp(currentForwardSpeed + (inputSpeed * 70 * delta) - (accDeltaY * 0.5), MIN_SPEED, MAX_SPEED);
+                accDeltaY *= 0.9;
+                
+                ball.position.z -= currentForwardSpeed * delta;
+                let tx = (inputX * 40) + (accDeltaX * 5); accDeltaX *= 0.8;
+                if(controlsInverted) tx = -tx;
+                velocity.x = THREE.MathUtils.lerp(velocity.x, tx, 15*delta);
+                ball.position.x = THREE.MathUtils.clamp(ball.position.x + velocity.x * delta, -9, 9);
+                
+                velocity.y -= GRAVITY * delta; ball.position.y += velocity.y * delta;
+                
+                // Collision
+                const row = Math.round(-ball.position.z / TILE_LENGTH), col = Math.round(ball.position.x / TILE_WIDTH + 2);
+                const flat = levelData.data.flat();
+                if(row >= flat.length) winGame();
+                else if(ball.position.y <= BALL_RADIUS) {
+                    const char = (flat[row] || "")[col];
+                    if(char && char !== ' ') {
+                        ball.position.y = BALL_RADIUS; velocity.y = 0; isGrounded = true;
+                        if(char==='B') { velocity.y = JUMP_FORCE; isGrounded = false; }
+                        if((char==='C'||char==='U') && !controlsInverted) { controlsInverted = true; inversionTimer = 5; document.getElementById('status-indicator').style.display='block'; }
+                    } else if(ball.position.y < -30) startGame();
+                } else isGrounded = false;
+
+                if(controlsInverted) { inversionTimer -= delta; if(inversionTimer<=0) { controlsInverted=false; document.getElementById('status-indicator').style.display='none'; } }
+
+                camera.position.lerp(new THREE.Vector3(ball.position.x*0.4, 7.5 + (currentForwardSpeed/MAX_SPEED)*3, ball.position.z + 14), 0.12);
+                camera.lookAt(ball.position.x, ball.position.y - 1.5, ball.position.z - 28);
+                document.getElementById('timer').innerText = clock.getElapsedTime().toFixed(2);
+                document.getElementById('speed-bar').style.height = ((currentForwardSpeed-MIN_SPEED)/(MAX_SPEED-MIN_SPEED)*100) + '%';
+            }
+            composer.render();
+        }
+
+        init();
+    </script>
+</body>
+</html>
