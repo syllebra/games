@@ -309,9 +309,12 @@
         let currentForwardSpeed = 0;
         let isGrounded = false;
         let isRecovering = false;
+        let respawnProtection = false; 
         let controlsInverted = false;
         let inversionTimer = 0;
         let impactShake = 0;
+
+        let resurrectState = null; // Object to hold resurrection animation data
 
         let touchLeftId = null, touchRightId = null;
         let lastTouchLeftX = 0, lastTouchRightY = 0;
@@ -371,9 +374,8 @@
                 el.addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     if(isUniform) pass.uniforms[prop].value = val * scale;
-                    else pass[prop] = val * scale; // SAO uses params object which is tricky here, handled manually below
+                    else pass[prop] = val * scale; 
                     
-                    // Update display
                     const disp = el.previousElementSibling.querySelector('.val-disp');
                     if(disp) disp.innerText = Math.round(val * (id==='rgb-intensity'||id==='sao-intensity' ? 1000 : 100)) + '%';
                 });
@@ -394,7 +396,6 @@
             });
             document.getElementById('rgb-intensity').addEventListener('input', (e) => {
                 if(rgbShiftPass) rgbShiftPass.uniforms['amount'].value = parseFloat(e.target.value);
-                // DISPLAY FIX: Scale by 1000 for display only (0.011 -> 11)
                 document.getElementById('val-rgb').innerText = (parseFloat(e.target.value)*1000).toFixed(0);
             });
             document.getElementById('retro-intensity').addEventListener('input', (e) => {
@@ -406,7 +407,6 @@
                 document.getElementById('val-retro').innerText = Math.round(v*100) + '%';
             });
 
-            // Toggle Panel
             document.getElementById('settings-header').addEventListener('click', () => {
                 const panel = document.getElementById('settings-panel');
                 const toggle = document.getElementById('settings-toggle');
@@ -482,11 +482,9 @@
             cvs.width = 64; cvs.height = 32;
             const ctx = cvs.getContext('2d');
             
-            // White Base
             ctx.fillStyle = '#eeeeee';
             ctx.fillRect(0,0,64,32);
             
-            // Black Patches (Pixel Art Style)
             ctx.fillStyle = '#111111';
             const drawPatch = (x,y) => {
                 ctx.beginPath();
@@ -498,14 +496,14 @@
             drawPatch(32, 24); drawPatch(0, 24); drawPatch(64, 24);
             
             const tex = new THREE.CanvasTexture(cvs);
-            tex.magFilter = THREE.NearestFilter; // Pixel look
+            tex.magFilter = THREE.NearestFilter; 
             tex.minFilter = THREE.NearestFilter;
             return tex;
         }
 
         function createBall() {
             ball = new THREE.Group();
-            const geometry = new THREE.SphereGeometry(BALL_RADIUS, 24, 24); // Lower poly for retro feel?
+            const geometry = new THREE.SphereGeometry(BALL_RADIUS, 24, 24); 
             const tex = createSoccerTexture();
             const material = new THREE.MeshPhysicalMaterial({
                 map: tex,
@@ -537,7 +535,6 @@
             bgSun.position.set(0, 80, -900);
             scene.add(bgSun);
 
-            // NEON GRID
             const gridHelper = new THREE.GridHelper(3000, 150, 0x00ffff, 0x110033);
             gridHelper.position.y = -6;
             scene.add(gridHelper);
@@ -554,7 +551,7 @@
         function createSpeedLines() {
             const geo = new THREE.BufferGeometry();
             const pos = [];
-            for (let i = 0; i < 600; i++) { // Increased count
+            for (let i = 0; i < 600; i++) { 
                 const r = 30 + Math.random() * 80;
                 const theta = Math.random() * Math.PI * 2;
                 const x = r * Math.cos(theta);
@@ -584,7 +581,6 @@
             if(levelMeshGroup) scene.remove(levelMeshGroup);
             levelMeshGroup = new THREE.Group();
             
-            // BEVELLED BOX
             const shape = new THREE.Shape();
             const w = (TILE_WIDTH - 0.7) / 2;
             const l = (TILE_LENGTH - 0.7) / 2;
@@ -609,17 +605,16 @@
             const plasticMaterials = {};
             for (const key in PALETTE) {
                 if (PALETTE[key] === null) continue;
-                // TRANSLUCENT NEON TILES
                 plasticMaterials[key] = new THREE.MeshPhysicalMaterial({
                     color: PALETTE[key].color,
                     roughness: 0.1,
                     metalness: 0.1,
                     emissive: PALETTE[key].color,
-                    emissiveIntensity: 0.25, // GLOW
+                    emissiveIntensity: 0.25, 
                     clearcoat: 1.0,
                     clearcoatRoughness: 0.1,
                     transparent: true,
-                    opacity: 0.65, // SEMI-TRANSPARENT
+                    opacity: 0.65, 
                     side: THREE.DoubleSide
                 });
             }
@@ -631,8 +626,6 @@
                         const char = rowString[colIndex] || ' ';
                         if (char !== ' ' && plasticMaterials[char]) {
                             const tile = new THREE.Mesh(bevelGeo, plasticMaterials[char]);
-                            
-                            // VARIATION
                             const vH = (Math.random() - 0.5) * 0.15;
                             const vR = (Math.random() - 0.5) * 0.01;
                             
@@ -670,6 +663,7 @@
             touchLeftId = null; touchRightId = null;
             accDeltaX = 0; accDeltaY = 0;
             controlsInverted = false; inversionTimer = 0; isRecovering = false;
+            respawnProtection = false;
             impactShake = 0;
             document.getElementById('status-indicator').style.display = 'none';
         }
@@ -686,7 +680,6 @@
             gameState = name;
             document.querySelectorAll('.modal').forEach(el => el.classList.add('hidden'));
 
-            // Safe access for tutorial elements
             const tl = document.getElementById('tut-left');
             const tr = document.getElementById('tut-right');
             if(tl) tl.classList.add('hidden');
@@ -730,46 +723,48 @@
                 updateCamera();
                 updateUI();
                 
+                // SPEED EFFECTS LOGIC - Moved out to be reused/disabled
                 const speedRatio = (currentForwardSpeed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED);
                 const clampedRatio = Math.max(0, Math.min(1, speedRatio));
 
-                // SHAKE CALCULATION (Speed + Impact)
+                // Shake
                 let totalShake = 0;
-                if (currentForwardSpeed > 95) {
-                    totalShake += (clampedRatio - 0.5) * 0.05;
-                }
+                if (currentForwardSpeed > 95) totalShake += (clampedRatio - 0.5) * 0.05;
                 if (impactShake > 0) {
                     totalShake += impactShake;
-                    impactShake = Math.max(0, impactShake - delta * 2); // Decay
+                    impactShake = Math.max(0, impactShake - delta * 2);
                 }
-
                 if (totalShake > 0) {
                     camera.position.x += (Math.random() - 0.5) * totalShake;
                     camera.position.y += (Math.random() - 0.5) * totalShake;
                 }
                 
-                // Dynamic RGB Shift
+                // RGB Shift
                 if (rgbShiftPass) {
                      const baseRGB = parseFloat(document.getElementById('rgb-intensity').value);
-                     // Add impact spike to RGB + Speed Factor
                      rgbShiftPass.uniforms['amount'].value = baseRGB + (clampedRatio * 0.003) + (impactShake * 0.01); 
                 }
 
+                // Speed Lines
                 if (speedLines) {
                     speedLines.position.z = camera.position.z - 50; 
-                    speedLines.material.opacity = clampedRatio * 0.7; // MORE VISIBLE
+                    speedLines.material.opacity = clampedRatio * 0.7; 
                     const pos = speedLines.geometry.attributes.position.array;
                     for(let i=2; i<pos.length; i+=3) {
-                        pos[i] += currentForwardSpeed * delta * 3.0; // FASTER LINES
+                        pos[i] += currentForwardSpeed * delta * 3.0; 
                         if(pos[i] > 50) pos[i] -= 400; 
                     }
                     speedLines.geometry.attributes.position.needsUpdate = true;
                 }
+
+            } else if (gameState === 'RESURRECTING') {
+                updateResurrection(delta);
+                if (rgbShiftPass) rgbShiftPass.uniforms['amount'].value = parseFloat(document.getElementById('rgb-intensity').value);
+                if (speedLines) speedLines.material.opacity = 0;
             } else {
                 if(ballMesh) { 
                     ballMesh.rotation.y += delta; 
                     ballMesh.rotation.z += delta * 0.5; 
-                    // Pixel Art Rotation - Rounding rotation to steps? Nah too jerky, just let NearestFilter do its work
                 }
                 camera.position.x = Math.sin(clock.elapsedTime * 0.15) * 3;
                 camera.lookAt(0,0,-30);
@@ -794,6 +789,45 @@
             });
 
             composer.render();
+        }
+
+        // NEW: Handles smooth resurrection animation
+        function updateResurrection(delta) {
+            if(!resurrectState) return;
+            
+            resurrectState.timer += delta;
+            const progress = Math.min(1.0, resurrectState.timer / resurrectState.duration);
+            const easeInOut = t => t<.5 ? 2*t*t : -1+(4-2*t)*t; // EaseInOutQuad
+            const p = easeInOut(progress);
+
+            // 1. BALL: Rise from abyss
+            // Lerp Y from deep start (-40) to safe ground (BALL_RADIUS)
+            ball.position.y = THREE.MathUtils.lerp(resurrectState.startBallY, BALL_RADIUS + 0.5, p);
+            
+            // 2. CAMERA: Slide from Fall Pos to Ready Pos
+            camera.position.x = THREE.MathUtils.lerp(resurrectState.startCam.x, resurrectState.targetCam.x, p);
+            camera.position.y = THREE.MathUtils.lerp(resurrectState.startCam.y, resurrectState.targetCam.y, p);
+            camera.position.z = THREE.MathUtils.lerp(resurrectState.startCam.z, resurrectState.targetCam.z, p);
+            
+            // 3. FOV: Reset smooth
+            camera.fov = THREE.MathUtils.lerp(resurrectState.startFov, 60, p);
+            camera.updateProjectionMatrix();
+
+            // 4. LOOK AT: Smoothly transition look target
+            const currentLookY = THREE.MathUtils.lerp(resurrectState.startLookY, ball.position.y - 1.5, p);
+            camera.lookAt(ball.position.x, currentLookY, ball.position.z - 28);
+
+            // FINISH
+            if(progress >= 1.0) {
+                ball.position.y = BALL_RADIUS;
+                velocity.y = 0; 
+                velocity.x = 0;
+                currentForwardSpeed = BASE_SPEED * 0.5; // Start slow
+                isRecovering = true;
+                respawnProtection = true;
+                gameState = 'PLAYING';
+                resurrectState = null;
+            }
         }
 
         function updatePhysics(delta) {
@@ -822,8 +856,6 @@
             if (ball.position.x > wall) { ball.position.x = wall; velocity.x = 0; }
             if (ball.position.x < -wall) { ball.position.x = -wall; velocity.x = 0; }
 
-            // Ball Rolling - Apply quaternion for better rolling visual?
-            // Simple rotation is fine for now
             const rollSpeed = currentForwardSpeed * delta / BALL_RADIUS;
             ballMesh.rotation.x -= rollSpeed;
             ballMesh.rotation.z -= (velocity.x * delta / BALL_RADIUS);
@@ -856,29 +888,20 @@
 
             if (ball.position.y <= BALL_RADIUS) {
                 if (tileType !== ' ') {
-                    if (velocity.y < 0 && ball.position.y > (isRecovering ? -5 : -1.2)) {
-                        
-                        // LANDING IMPACT JUICE
-                        if (!isGrounded && velocity.y < -50) {
-                            impactShake = 0.3; // Trigger shake on hard landing
-                        }
-
+                    if (velocity.y < 0 && ball.position.y > (respawnProtection ? -20 : -1.2)) {
+                        if (!isGrounded && velocity.y < -50) impactShake = 0.3; 
+                        respawnProtection = false;
                         ball.position.y = BALL_RADIUS;
                         velocity.y = 0;
                         isGrounded = true;
-                        
                         if(tileType === 'V') currentForwardSpeed = THREE.MathUtils.lerp(currentForwardSpeed, MIN_SPEED, 3.5*delta);
                         if(tileType === 'J') currentForwardSpeed = THREE.MathUtils.lerp(currentForwardSpeed, MAX_SPEED, 3.5*delta);
-                        if(tileType === 'B') { 
-                            velocity.y = JUMP_FORCE; 
-                            isGrounded = false; 
-                            impactShake = 0.2; // Small shake on jump launch
-                        }
+                        if(tileType === 'B') { velocity.y = JUMP_FORCE; isGrounded = false; impactShake = 0.2; }
                         if(tileType === 'C' || tileType === 'U') {
                             if (!controlsInverted) {
                                 controlsInverted = true; inversionTimer = 5.0;
                                 document.getElementById('status-indicator').style.display = 'block';
-                                impactShake = 0.5; // Big shake on invert
+                                impactShake = 0.5; 
                             } else inversionTimer = 5.0;
                         }
                     }
@@ -887,39 +910,77 @@
         }
 
         function triggerRespawn() {
-            if (gameState === 'RESPAWNING') return;
+            if (gameState === 'RESPAWNING' || gameState === 'RESURRECTING') return;
             gameState = 'RESPAWNING';
-            currentForwardSpeed = 0; velocity.set(0,0,0);
+            
             const flatData = levelData.data.flat();
+            
+            // Keep current camera look-at Y to avoid snap before animation
+            const currentLookY = ball.position.y - 1.5;
+
             setTimeout(() => {
-                const currentGridRow = Math.round(-ball.position.z / TILE_LENGTH);
-                let safeRow = currentGridRow + 3; 
+                let currentGridRow = Math.round(-ball.position.z / TILE_LENGTH);
+                let safeRow = currentGridRow;
                 let foundSafe = false;
-                while (!foundSafe && safeRow < flatData.length) {
-                    if (flatData[safeRow][2] !== ' ') foundSafe = true;
-                    else safeRow++;
+                
+                // BACKTRACK
+                for(let i=0; i<20; i++) {
+                     let r = currentGridRow - i;
+                     if(r < 0) r = 0;
+                     if(flatData[r] && flatData[r][2] !== ' ') { safeRow = r; foundSafe = true; break; }
                 }
-                if (!foundSafe) { winGame(); return; }
+                if(!foundSafe) {
+                     for(let i=1; i<20; i++) {
+                         let r = currentGridRow + i;
+                         if(r < flatData.length && flatData[r][2] !== ' ') { safeRow = r; foundSafe = true; break; }
+                     }
+                }
+                if (!foundSafe) { winGame(); return; } 
+
+                // Setup Resurrection Animation
+                gameState = 'RESURRECTING';
+                
+                // Set Ball X/Z, but keep Y deep
+                ball.position.x = 0;
                 ball.position.z = -(safeRow * TILE_LENGTH);
-                ball.position.x = 0; ball.position.y = 20;
-                velocity.y = 40; currentForwardSpeed = BASE_SPEED; isRecovering = true;
-                gameState = 'PLAYING';
-            }, 600);
+                const startBallY = -40; // Deep down
+                ball.position.y = startBallY;
+                velocity.set(0,0,0);
+                
+                // Calculate Target Camera Position (Standard gameplay pos)
+                const targetZ = ball.position.z + 14;
+                // Standard height approx 7.5 when slow
+                const targetCamY = 7.5; 
+                
+                resurrectState = {
+                    timer: 0,
+                    duration: 1.2, // seconds
+                    startBallY: startBallY,
+                    startCam: camera.position.clone(),
+                    targetCam: new THREE.Vector3(0, targetCamY, targetZ),
+                    startFov: camera.fov,
+                    startLookY: currentLookY
+                };
+
+            }, 500);
         }
 
         function updateCamera() {
             const targetZ = ball.position.z + 14; 
             const targetX = ball.position.x * 0.45;
+            
             camera.position.z += (targetZ - camera.position.z) * 0.12;
             camera.position.x += (targetX - camera.position.x) * 0.1;
             
-            // INCREASED FOV DISTORTION FOR SPEED
             const speedRatio = currentForwardSpeed / MAX_SPEED;
-            camera.position.y = 7.5 + speedRatio * 1.5; // Lower slightly at high speed? No keep it standard
-            camera.fov = 60 + speedRatio * 30; // MORE FOV STRETCH (60 -> 90)
+            camera.position.y = 7.5 + speedRatio * 1.5; 
+            camera.fov = 60 + speedRatio * 30; 
             camera.updateProjectionMatrix();
             
-            camera.lookAt(ball.position.x, ball.position.y - 1.5, ball.position.z - 28);
+            let lookY = ball.position.y - 1.5;
+            if(lookY < -5) lookY = -5; 
+            
+            camera.lookAt(ball.position.x, lookY, ball.position.z - 28);
         }
 
         function updateUI() {
@@ -1002,7 +1063,6 @@
                 list.appendChild(b);
             });
         }
-
         fetch('trailblazer_levels.json')
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
@@ -1017,8 +1077,6 @@
         })
         .finally(() => {
             init();
-        });
-        
-    </script>
+        });    </script>
 </body>
 </html>
