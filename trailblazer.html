@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trailblazer XL - Custom Graphics</title>
+    <title>Trailblazer XL - Neon Speed</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0d0015; font-family: 'Courier New', Courier, monospace; user-select: none; -webkit-user-select: none; touch-action: none; }
+        body { margin: 0; overflow: hidden; background-color: #050010; font-family: 'Courier New', Courier, monospace; user-select: none; -webkit-user-select: none; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
         
         /* UI LAYER */
@@ -28,18 +28,42 @@
         #settings-panel {
             position: absolute;
             top: 80px; left: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px; border-radius: 10px;
+            background: rgba(0,0,0,0.8);
             border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
             pointer-events: auto;
             color: #00ffff; font-size: 12px;
-            display: flex; flex-direction: column; gap: 10px;
-            width: 200px;
+            width: 220px;
             backdrop-filter: blur(5px);
             z-index: 100;
+            transition: height 0.3s ease;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
+        
+        #settings-header {
+            padding: 10px;
+            background: rgba(0, 255, 255, 0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(0,255,255,0.1);
+        }
+        #settings-header:hover { background: rgba(0, 255, 255, 0.2); }
+
+        #settings-content {
+            padding: 15px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        
         .setting-row { display: flex; flex-direction: column; gap: 5px; }
-        input[type=range] { width: 100%; cursor: pointer; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #00ffff; }
+        label { display: flex; justify-content: space-between; }
+        .val-disp { color: #fff; font-size: 10px; }
+
+        /* MINIMIZED STATE - Applied by default via HTML class */
+        #settings-panel.minimized #settings-content { display: none; }
+        #settings-panel.minimized { width: auto; }
 
         /* MODALES */
         .modal {
@@ -111,6 +135,10 @@
         .hidden { display: none !important; }
 
         #zone-left { position: absolute; left: 0; bottom: 0; width: 50%; height: 100%; pointer-events: none; }
+        
+        .tutorial-text { position: absolute; bottom: 40px; width: 40%; text-align: center; font-size: 10px; opacity: 0.7; color: #aaa; pointer-events: none; text-shadow: 1px 1px 2px black; font-weight: bold;}
+        #tut-left { left: 5%; } 
+        #tut-right { right: 5%; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -119,11 +147,13 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SAOShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/DepthLimitedBlurShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/UnpackDepthRGBAShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FilmShader.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SAOPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/FilmPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/BokehShader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/BokehPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
@@ -138,23 +168,33 @@
             <span id="level-name">SELECT</span>
         </div>
         
-        <!-- SETTINGS UI -->
-        <div id="settings-panel">
-            <div class="setting-row">
-                <label>SSAO (Ombres):</label>
-                <input type="range" id="sao-intensity" min="0" max="0.5" step="0.01" value="0.03">
+        <!-- SETTINGS UI - MINIMIZED BY DEFAULT -->
+        <div id="settings-panel" class="minimized">
+            <div id="settings-header">
+                <span>PARAMÈTRES</span>
+                <span id="settings-toggle">[+]</span>
             </div>
-            <div class="setting-row">
-                <label>Bloom (Éclat):</label>
-                <input type="range" id="bloom-strength" min="0" max="1" step="0.05" value="0.35">
-            </div>
-            <div class="setting-row">
-                <label>Vignette:</label>
-                <input type="range" id="vignette-darkness" min="0" max="2" step="0.1" value="1.0">
-            </div>
-            <div class="setting-row">
-                <label>Aberration:</label>
-                <input type="range" id="rgb-intensity" min="0" max="0.01" step="0.001" value="0.001">
+            <div id="settings-content">
+                <div class="setting-row">
+                    <label>Retro (Grain/TV): <span class="val-disp" id="val-retro">40%</span></label>
+                    <input type="range" id="retro-intensity" min="0" max="1" step="0.05" value="0.4">
+                </div>
+                <div class="setting-row">
+                    <label>SSAO (Ombres): <span class="val-disp" id="val-sao">7%</span></label>
+                    <input type="range" id="sao-intensity" min="0" max="0.1" step="0.001" value="0.07">
+                </div>
+                <div class="setting-row">
+                    <label>Bloom (Néon): <span class="val-disp" id="val-bloom">160%</span></label>
+                    <input type="range" id="bloom-strength" min="0" max="3.0" step="0.1" value="1.6">
+                </div>
+                <div class="setting-row">
+                    <label>Vignette: <span class="val-disp" id="val-vignette">110%</span></label>
+                    <input type="range" id="vignette-darkness" min="0" max="2" step="0.1" value="1.1">
+                </div>
+                <div class="setting-row">
+                    <label>Aberration: <span class="val-disp" id="val-rgb">11</span></label>
+                    <input type="range" id="rgb-intensity" min="0" max="0.03" step="0.0001" value="0.011">
+                </div>
             </div>
         </div>
 
@@ -163,7 +203,7 @@
 
         <div id="screen-select" class="modal">
             <h1>TRAILBLAZER</h1>
-            <h2>ULTRA XL</h2>
+            <h2>NEON SPEED</h2>
             <div id="level-list"></div>
         </div>
 
@@ -173,6 +213,8 @@
                 <p><strong>Gauche:</strong> Direction</p>
                 <p><strong>Droite:</strong> Vitesse & Saut</p>
                 <button id="btn-play" class="menu-btn">DÉMARRER</button>
+                <br>
+                <button id="btn-back" class="menu-btn" style="background: transparent; border: 1px solid #555; font-size: 14px; padding: 8px 20px; margin-top: 10px;">RETOUR</button>
             </div>
         </div>
 
@@ -184,6 +226,9 @@
             </div>
         </div>
         <div id="zone-left"></div>
+        
+        <div id="tut-left" class="tutorial-text hidden">DIRECTION</div>
+        <div id="tut-right" class="tutorial-text hidden">VITESSE / SAUT</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -192,83 +237,186 @@
         // --- DATA NIVEAUX ---
         const P_BASE = ["ORORO","ROROR"];
         const P_JUMP = ["BBBBB","     ","     ","BBBBB"];
+        const P_HOLE = ["O   O","R   R"];
         const P_SPEED = ["OJOJO","JOJOJ"];
         const P_SLOW = ["VOVOV","OVOVO"];
         const P_INV = ["O C O","O U O"];
+        const P_NARROW = ["  O  ","  R  "];
+        
+        function repeat(pattern, count) {
+            let res = [];
+            for(let i=0; i<count; i++) res = res.concat(pattern);
+            return res;
+        }
+        function mix(patterns, totalLen) {
+            let res = [];
+            while(res.length < totalLen) {
+                const p = patterns[Math.floor(Math.random() * patterns.length)];
+                res = res.concat(p);
+            }
+            return res.slice(0, totalLen);
+        }
+
         const LEVELS = [
-            { id: 1, name: "1. PROMENADE", data: [...repeat(P_BASE, 30), ...repeat(P_JUMP, 2), ...repeat(P_BASE, 50)] },
-            { id: 2, name: "2. AUTOROUTE", data: [...repeat(P_BASE, 10), ...repeat(P_SPEED, 30), ...repeat(P_BASE, 40)] },
-            { id: 3, name: "3. CHAOS", data: [...repeat(P_BASE, 10), ...repeat(P_INV, 5), ...repeat(P_JUMP, 2), ...repeat(P_SLOW, 20), ...repeat(P_BASE, 20)] }
+            { id: 1, name: "1. PROMENADE", desc: "Balade classique.", data: [...repeat(P_BASE, 30), ...repeat(P_JUMP, 2), ...repeat(P_BASE, 20), ...repeat(P_JUMP, 2), ...repeat(P_BASE, 30)] },
+            { id: 2, name: "2. AUTOROUTE", desc: "Accélération.", data: [...repeat(P_BASE, 10), ...repeat(P_SPEED, 30), ...repeat(P_BASE, 10), ...repeat(P_SPEED, 40), ...repeat(P_BASE, 20)] },
+            { id: 3, name: "3. ZIG ZAG", desc: "Virages techniques.", data: [...repeat(P_BASE, 10), ...repeat(["O   O","R   R"], 20), ...repeat(["  O  "," R R ","O   O"], 20), ...repeat(P_BASE, 20)] },
+            { id: 4, name: "4. GRANDS SAUTS", desc: "Attention à la chute.", data: [...repeat(P_BASE, 10), ...repeat(P_JUMP, 5), ...repeat(P_BASE, 20), ...repeat(P_JUMP, 10), ...repeat(P_BASE, 10)] },
+            { id: 5, name: "5. FREINAGE", desc: "Maîtrise du frein.", data: [...repeat(P_BASE, 10), ...repeat(P_SPEED, 20), ...repeat(P_SLOW, 20), ...repeat(P_SPEED, 20), ...repeat(P_SLOW, 20), ...repeat(P_BASE, 20)] },
+            { id: 6, name: "6. MIROIR", desc: "Monde inversé.", data: [...repeat(P_BASE, 10), ...repeat(P_INV, 5), ...repeat(P_BASE, 30), ...repeat(P_INV, 5), ...repeat(P_BASE, 30)] },
+            { id: 7, name: "7. FUNAMBULE", desc: "Passages étroits.", data: [...repeat(P_BASE, 10), ...repeat(P_NARROW, 30), ...repeat(P_JUMP, 2), ...repeat(P_NARROW, 30), ...repeat(P_BASE, 20)] },
+            { id: 8, name: "8. PIEGES", desc: "Trous imprévisibles.", data: [...repeat(P_BASE, 20), ...repeat(["ROROR"," O O ","ROROR","     "], 30), ...repeat(P_BASE, 20)] },
+            { id: 9, name: "9. CHAOS", desc: "Mélange total.", data: [...mix([P_BASE, P_SPEED, P_SLOW, P_JUMP, P_HOLE], 300)] },
+            { id: 10, name: "10. ENFER", desc: "Bonne chance.", data: [...repeat(P_SPEED, 20), ...repeat(P_INV, 2), ...repeat(P_HOLE, 30), ...repeat(P_NARROW, 30), ...mix([P_SPEED, P_INV, P_HOLE], 100)] }
         ];
 
-        function repeat(p, c) { let res = []; for(let i=0; i<c; i++) res = res.concat(p); return res; }
+        let levelData = null;
 
         // --- CONSTANTES ---
-        const TILE_WIDTH = 4, TILE_THICKNESS = 1.0, TILE_LENGTH = 10.0; 
+        const TILE_WIDTH = 4;
+        const TILE_THICKNESS = 1.0;
+        const TILE_LENGTH = 10.0; 
         const BALL_RADIUS = 0.6;
         const LANE_COUNT = 5;
-        const BASE_SPEED = 60, MAX_SPEED = 140, MIN_SPEED = 10;
-        const GRAVITY = 400, JUMP_FORCE = 65; 
+        const BASE_SPEED = 60; 
+        const MAX_SPEED = 135;
+        const MIN_SPEED = 10;
+        const GRAVITY = 400;   
+        const JUMP_FORCE = 65; 
 
+        // PALETTE ORIGINALE
         const PALETTE = {
-            'O': { color: 0xff8800 }, 'R': { color: 0xff1111 }, 
-            'V': { color: 0x11ff11 }, 'B': { color: 0xffffff }, 
-            'J': { color: 0xffff11 }, 'C': { color: 0x00ffff }, 
-            'U': { color: 0x2222ff }, ' ': null
+            'O': { color: 0xff8800 }, 
+            'R': { color: 0xff1111 }, 
+            'V': { color: 0x11ff11 }, 
+            'B': { color: 0xffffff }, 
+            'J': { color: 0xffff11 }, 
+            'C': { color: 0x00ffff }, 
+            'U': { color: 0x2222ff }, 
+            ' ': null
         };
 
         let scene, camera, renderer, composer;
-        let bloomPass, saoPass, rgbShiftPass, vignettePass; 
-        let ball, ballMesh, levelMeshGroup, clock;
+        let rgbShiftPass, saoPass, bloomPass, vignettePass, filmPass; 
+        let ball, ballMesh;
+        let levelMeshGroup;
+        let particles, speedLines;
+        let bgSun, bgShapes = []; 
+        let clock;
         let gameState = 'LEVEL_SELECT';
 
-        let velocity = new THREE.Vector3(0, 0, 0), currentForwardSpeed = 0;
-        let isGrounded = false, controlsInverted = false, inversionTimer = 0;
+        let velocity = new THREE.Vector3(0, 0, 0); 
+        let currentForwardSpeed = 0;
+        let isGrounded = false;
+        let isRecovering = false;
+        let controlsInverted = false;
+        let inversionTimer = 0;
+        let impactShake = 0;
+
+        let touchLeftId = null, touchRightId = null;
+        let lastTouchLeftX = 0, lastTouchRightY = 0;
+        let accDeltaX = 0, accDeltaY = 0;
+        let isRightDragging = false;
         let inputX = 0, inputSpeed = 0;
-        let accDeltaX = 0, accDeltaY = 0, touchLeftId = null, touchRightId = null, lastX=0, lastY=0;
 
         function init() {
             const container = document.getElementById('canvas-container');
+            
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a10); 
-            scene.fog = new THREE.Fog(0x0a0a10, 100, 1200); 
+            scene.background = new THREE.Color(0x050010); 
+            scene.fog = new THREE.Fog(0x050010, 100, 1500); 
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
             camera.position.set(0, 6, 10);
 
-            renderer = new THREE.WebGLRenderer({ antialias: false, logarithmicDepthBuffer: true }); 
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: false, 
+                powerPreference: "high-performance",
+                logarithmicDepthBuffer: true 
+            }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0; 
             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-            const dl = new THREE.DirectionalLight(0xffffff, 1.0);
-            dl.position.set(50, 100, 50); dl.castShadow = true;
-            dl.shadow.mapSize.width = 1024; dl.shadow.mapSize.height = 1024;
-            scene.add(dl);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
 
             setupPostProcessing();
             createBall();
             createEnvironment();
+            createSpeedLines(); 
+            createBackgroundShapes(); 
             createLevelButtons();
 
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('keydown', (e) => handleKey(e, 1));
-            document.addEventListener('keyup', (e) => handleKey(e, 0));
-            container.addEventListener('touchstart', handleTouchStart, {passive:false});
-            container.addEventListener('touchmove', handleTouchMove, {passive:false});
-            container.addEventListener('touchend', handleTouchEnd);
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('keydown', onKeyDown, false);
+            document.addEventListener('keyup', onKeyUp, false);
+            setupSplitTouch();
 
-            // Settings Listeners
-            document.getElementById('sao-intensity').oninput = (e) => { saoPass.params.saoIntensity = parseFloat(e.target.value); };
-            document.getElementById('bloom-strength').oninput = (e) => { bloomPass.strength = parseFloat(e.target.value); };
-            document.getElementById('vignette-darkness').oninput = (e) => { vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); };
-            document.getElementById('rgb-intensity').oninput = (e) => { rgbShiftPass.uniforms['amount'].value = parseFloat(e.target.value); };
+            // SETTINGS LISTENERS
+            const bindSetting = (id, pass, prop, isUniform=false, scale=1) => {
+                const el = document.getElementById(id);
+                if(!el) return;
+                el.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    if(isUniform) pass.uniforms[prop].value = val * scale;
+                    else pass[prop] = val * scale; // SAO uses params object which is tricky here, handled manually below
+                    
+                    // Update display
+                    const disp = el.previousElementSibling.querySelector('.val-disp');
+                    if(disp) disp.innerText = Math.round(val * (id==='rgb-intensity'||id==='sao-intensity' ? 1000 : 100)) + '%';
+                });
+            };
 
-            document.getElementById('btn-play').onclick = startGame;
-            document.getElementById('btn-menu').onclick = () => setScreen('LEVEL_SELECT');
+            // Manual bindings for specific structures
+            document.getElementById('sao-intensity').addEventListener('input', (e) => {
+                if(saoPass) saoPass.params.saoIntensity = parseFloat(e.target.value);
+                document.getElementById('val-sao').innerText = (parseFloat(e.target.value)*100).toFixed(1) + '%';
+            });
+            document.getElementById('bloom-strength').addEventListener('input', (e) => {
+                if(bloomPass) bloomPass.strength = parseFloat(e.target.value);
+                document.getElementById('val-bloom').innerText = Math.round(parseFloat(e.target.value)*100) + '%';
+            });
+            document.getElementById('vignette-darkness').addEventListener('input', (e) => {
+                if(vignettePass) vignettePass.uniforms["darkness"].value = parseFloat(e.target.value);
+                document.getElementById('val-vignette').innerText = Math.round(parseFloat(e.target.value)*100) + '%';
+            });
+            document.getElementById('rgb-intensity').addEventListener('input', (e) => {
+                if(rgbShiftPass) rgbShiftPass.uniforms['amount'].value = parseFloat(e.target.value);
+                // DISPLAY FIX: Scale by 1000 for display only (0.011 -> 11)
+                document.getElementById('val-rgb').innerText = (parseFloat(e.target.value)*1000).toFixed(0);
+            });
+            document.getElementById('retro-intensity').addEventListener('input', (e) => {
+                const v = parseFloat(e.target.value);
+                if(filmPass) {
+                    filmPass.uniforms['nIntensity'].value = v * 0.5; // Noise
+                    filmPass.uniforms['sIntensity'].value = v * 0.8; // Scanlines
+                }
+                document.getElementById('val-retro').innerText = Math.round(v*100) + '%';
+            });
+
+            // Toggle Panel
+            document.getElementById('settings-header').addEventListener('click', () => {
+                const panel = document.getElementById('settings-panel');
+                const toggle = document.getElementById('settings-toggle');
+                panel.classList.toggle('minimized');
+                toggle.innerText = panel.classList.contains('minimized') ? '[+]' : '[-]';
+            });
+
+            document.getElementById('btn-play').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+            document.getElementById('btn-back').addEventListener('click', (e) => { e.stopPropagation(); setScreen('LEVEL_SELECT'); });
+            document.getElementById('btn-menu').addEventListener('click', (e) => { e.stopPropagation(); setScreen('LEVEL_SELECT'); });
 
             clock = new THREE.Clock();
             animate();
@@ -276,168 +424,583 @@
 
         function setupPostProcessing() {
             composer = new THREE.EffectComposer(renderer);
-            composer.addPass(new THREE.RenderPass(scene, camera));
+            
+            const renderPass = new THREE.RenderPass(scene, camera);
+            composer.addPass(renderPass);
 
+            // 1. SAO - 7%
             saoPass = new THREE.SAOPass(scene, camera, false, true);
-            saoPass.params.saoIntensity = 0.03; 
-            saoPass.params.saoBias = 0.5; saoPass.params.saoScale = 10;
-            saoPass.params.saoKernelRadius = 20; saoPass.params.saoBlur = true;
+            saoPass.params.output = THREE.SAOPass.OUTPUT.Default;
+            saoPass.params.saoBias = 0.5;
+            saoPass.params.saoIntensity = 0.07; 
+            saoPass.params.saoScale = 50;
+            saoPass.params.saoKernelRadius = 15;
+            saoPass.params.saoBlur = true;
             composer.addPass(saoPass);
 
-            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.4, 0.85);
-            bloomPass.threshold = 0.7;
+            // 2. BLOOM - 160%
+            bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.6; 
+            bloomPass.strength = 1.6;  
+            bloomPass.radius = 0.2;
             composer.addPass(bloomPass);
 
+            // 3. RETRO FILM PASS - 40%
+            filmPass = new THREE.FilmPass(
+                0.2,   // noise intensity (0.4 * 0.5)
+                0.32,   // scanline intensity (0.4 * 0.8)
+                648,    // scanline count
+                false   // grayscale
+            );
+            composer.addPass(filmPass);
+
+            // 4. BOKEH
+            const bokehPass = new THREE.BokehPass(scene, camera, {
+                focus: 30.0,
+                aperture: 0.00001,
+                maxblur: 0.002,
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            composer.addPass(bokehPass);
+
+            // 5. RGB SHIFT - 11 (0.011)
             rgbShiftPass = new THREE.ShaderPass(THREE.RGBShiftShader);
-            rgbShiftPass.uniforms['amount'].value = 0.001; 
+            rgbShiftPass.uniforms['amount'].value = 0.011; 
             composer.addPass(rgbShiftPass);
 
+            // 6. VIGNETTE - 110%
             vignettePass = new THREE.ShaderPass(THREE.VignetteShader);
             vignettePass.uniforms["offset"].value = 1.1; 
-            vignettePass.uniforms["darkness"].value = 1.0;
+            vignettePass.uniforms["darkness"].value = 1.1;
             composer.addPass(vignettePass);
+        }
+
+        // GENERATE PIXEL ART TEXTURE
+        function createSoccerTexture() {
+            const cvs = document.createElement('canvas');
+            cvs.width = 64; cvs.height = 32;
+            const ctx = cvs.getContext('2d');
+            
+            // White Base
+            ctx.fillStyle = '#eeeeee';
+            ctx.fillRect(0,0,64,32);
+            
+            // Black Patches (Pixel Art Style)
+            ctx.fillStyle = '#111111';
+            const drawPatch = (x,y) => {
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI*2);
+                ctx.fill();
+            };
+            
+            drawPatch(16, 8); drawPatch(48, 8);
+            drawPatch(32, 24); drawPatch(0, 24); drawPatch(64, 24);
+            
+            const tex = new THREE.CanvasTexture(cvs);
+            tex.magFilter = THREE.NearestFilter; // Pixel look
+            tex.minFilter = THREE.NearestFilter;
+            return tex;
         }
 
         function createBall() {
             ball = new THREE.Group();
-            ballMesh = new THREE.Mesh(
-                new THREE.SphereGeometry(BALL_RADIUS, 32, 32),
-                new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.1, metalness: 0.2, clearcoat: 1.0 })
-            );
-            ballMesh.castShadow = true; ball.add(ballMesh);
+            const geometry = new THREE.SphereGeometry(BALL_RADIUS, 24, 24); // Lower poly for retro feel?
+            const tex = createSoccerTexture();
+            const material = new THREE.MeshPhysicalMaterial({
+                map: tex,
+                color: 0xffffff,
+                roughness: 0.2,
+                metalness: 0.1,
+                clearcoat: 0.5
+            });
+            ballMesh = new THREE.Mesh(geometry, material);
+            ballMesh.castShadow = true;
+            ball.add(ballMesh);
+
+            const light = new THREE.PointLight(0xffffff, 0.8, 20);
+            light.position.set(0, 1, 0);
+            ball.add(light);
+
             scene.add(ball);
         }
 
         function createEnvironment() {
-            const grid = new THREE.GridHelper(3000, 150, 0x222233, 0x050505);
-            grid.position.y = -6; scene.add(grid);
-            
-            const sun = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa00, wireframe: true, transparent: true, opacity: 0.1 }));
-            sun.position.set(0, 80, -900); scene.add(sun);
+            const sunGeo = new THREE.SphereGeometry(300, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ 
+                color: 0xffaa00, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.1 
+            });
+            bgSun = new THREE.Mesh(sunGeo, sunMat);
+            bgSun.position.set(0, 80, -900);
+            scene.add(bgSun);
+
+            // NEON GRID
+            const gridHelper = new THREE.GridHelper(3000, 150, 0x00ffff, 0x110033);
+            gridHelper.position.y = -6;
+            scene.add(gridHelper);
+
+            const partGeo = new THREE.BufferGeometry();
+            const pos = [];
+            for(let i=0; i<1200; i++) pos.push((Math.random()-0.5)*1000, (Math.random()-0.5)*500, (Math.random()-0.5)*1500);
+            partGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            const partMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.2 });
+            particles = new THREE.Points(partGeo, partMat);
+            scene.add(particles);
+        }
+
+        function createSpeedLines() {
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            for (let i = 0; i < 600; i++) { // Increased count
+                const r = 30 + Math.random() * 80;
+                const theta = Math.random() * Math.PI * 2;
+                const x = r * Math.cos(theta);
+                const y = r * Math.sin(theta);
+                const z = (Math.random() - 0.5) * 800;
+                pos.push(x, y, z);
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ color: 0xaaddff, size: 2.0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+            speedLines = new THREE.Points(geo, mat);
+            scene.add(speedLines);
+        }
+
+        function createBackgroundShapes() {
+            const geo = new THREE.IcosahedronGeometry(60, 0);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xff4400, wireframe: true, transparent: true, opacity: 0.08 }); 
+            for(let i=0; i<10; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set((Math.random()-0.5)*1000, 50 + Math.random()*250, -200 - Math.random()*1000);
+                mesh.userData = { rotSpeed: (Math.random()-0.5)*0.004, floatSpeed: (Math.random()*0.015) };
+                scene.add(mesh);
+                bgShapes.push(mesh);
+            }
         }
 
         function buildLevel() {
             if(levelMeshGroup) scene.remove(levelMeshGroup);
             levelMeshGroup = new THREE.Group();
             
+            // BEVELLED BOX
             const shape = new THREE.Shape();
-            const w = (TILE_WIDTH - 0.7)/2, l = (TILE_LENGTH - 0.7)/2;
-            shape.moveTo(-w,-l); shape.lineTo(w,-l); shape.lineTo(w,l); shape.lineTo(-w,l); shape.lineTo(-w,-l);
-            const geo = new THREE.ExtrudeGeometry(shape, { depth: TILE_THICKNESS, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.35, bevelSegments: 10 });
-            geo.rotateX(Math.PI/2);
+            const w = (TILE_WIDTH - 0.7) / 2;
+            const l = (TILE_LENGTH - 0.7) / 2;
+            shape.moveTo(-w, -l);
+            shape.lineTo(w, -l);
+            shape.lineTo(w, l);
+            shape.lineTo(-w, l);
+            shape.lineTo(-w, -l);
 
-            const mats = {};
-            for(const k in PALETTE) if(PALETTE[k]) mats[k] = new THREE.MeshPhysicalMaterial({ color: PALETTE[k].color, roughness: 0.08, metalness: 0.15, clearcoat: 1.0 });
+            const extrudeSettings = {
+                steps: 1,
+                depth: TILE_THICKNESS,
+                bevelEnabled: true,
+                bevelThickness: 0.5, 
+                bevelSize: 0.35,      
+                bevelOffset: 0,
+                bevelSegments: 10     
+            };
+            const bevelGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            bevelGeo.rotateX(Math.PI / 2); 
 
-            levelData.data.flat().forEach((row, ri) => {
-                for(let ci=0; ci<LANE_COUNT; ci++) {
-                    const char = row[ci];
-                    if(char && char !== ' ' && mats[char]) {
-                        const tile = new THREE.Mesh(geo, mats[char]);
-                        tile.position.set((ci-2)*TILE_WIDTH, -TILE_THICKNESS/2, -(ri*TILE_LENGTH));
-                        tile.receiveShadow = true; tile.castShadow = true;
-                        levelMeshGroup.add(tile);
+            const plasticMaterials = {};
+            for (const key in PALETTE) {
+                if (PALETTE[key] === null) continue;
+                // TRANSLUCENT NEON TILES
+                plasticMaterials[key] = new THREE.MeshPhysicalMaterial({
+                    color: PALETTE[key].color,
+                    roughness: 0.1,
+                    metalness: 0.1,
+                    emissive: PALETTE[key].color,
+                    emissiveIntensity: 0.25, // GLOW
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.1,
+                    transparent: true,
+                    opacity: 0.65, // SEMI-TRANSPARENT
+                    side: THREE.DoubleSide
+                });
+            }
+
+            if(levelData && levelData.data) {
+                const flatData = levelData.data.flat();
+                flatData.forEach((rowString, rowIndex) => {
+                    for (let colIndex = 0; colIndex < LANE_COUNT; colIndex++) {
+                        const char = rowString[colIndex] || ' ';
+                        if (char !== ' ' && plasticMaterials[char]) {
+                            const tile = new THREE.Mesh(bevelGeo, plasticMaterials[char]);
+                            
+                            // VARIATION
+                            const vH = (Math.random() - 0.5) * 0.15;
+                            const vR = (Math.random() - 0.5) * 0.01;
+                            
+                            tile.position.set(
+                                (colIndex - 2) * TILE_WIDTH, 
+                                -TILE_THICKNESS/2 + vH, 
+                                -(rowIndex * TILE_LENGTH)
+                            );
+                            tile.rotation.z = vR;
+                            tile.rotation.x = vR;
+
+                            tile.receiveShadow = true; 
+                            tile.castShadow = true; 
+                            tile.userData = { type: char };
+                            levelMeshGroup.add(tile);
+                        }
                     }
-                }
-            });
+                });
+                const endRow = flatData.length;
+                const finishGeo = new THREE.BoxGeometry(TILE_WIDTH * 5, 1, 10);
+                const finishMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const finishLine = new THREE.Mesh(finishGeo, finishMat);
+                finishLine.position.set(0, -0.5, -(endRow * TILE_LENGTH));
+                levelMeshGroup.add(finishLine);
+            }
             scene.add(levelMeshGroup);
         }
 
-        function handleKey(e, v) {
-            if(e.code==='ArrowLeft') inputX = v ? -1 : 0;
-            if(e.code==='ArrowRight') inputX = v ? 1 : 0;
-            if(e.code==='ArrowUp') inputSpeed = v ? 1 : 0;
-            if(e.code==='ArrowDown') inputSpeed = v ? -1 : 0;
-            if(e.code==='Space' && v && isGrounded) velocity.y = JUMP_FORCE;
+        function resetBall() {
+            ball.position.set(0, 5, 0);
+            velocity.set(0, 0, 0);
+            ball.rotation.set(0,0,0);
+            currentForwardSpeed = 0;
+            inputX = 0; inputSpeed = 0;
+            touchLeftId = null; touchRightId = null;
+            accDeltaX = 0; accDeltaY = 0;
+            controlsInverted = false; inversionTimer = 0; isRecovering = false;
+            impactShake = 0;
+            document.getElementById('status-indicator').style.display = 'none';
         }
 
-        function handleTouchStart(e) {
-            e.preventDefault(); const half = window.innerWidth/2;
-            for(let t of e.changedTouches) {
-                if(t.clientX < half && touchLeftId===null) { touchLeftId=t.identifier; lastX=t.clientX; }
-                else if(t.clientX >= half && touchRightId===null) { touchRightId=t.identifier; lastY=t.clientY; }
-            }
+        function startGame() {
+            resetBall();
+            ball.position.z = 10.0; 
+            currentForwardSpeed = BASE_SPEED;
+            setScreen('PLAYING');
+            clock.start();
         }
-        function handleTouchMove(e) {
-            for(let t of e.changedTouches) {
-                if(t.identifier===touchLeftId) { accDeltaX += t.clientX - lastX; lastX=t.clientX; }
-                if(t.identifier===touchRightId) { accDeltaY += t.clientY - lastY; lastY=t.clientY; }
-            }
-        }
-        function handleTouchEnd(e) {
-            for(let t of e.changedTouches) {
-                if(t.identifier===touchLeftId) { touchLeftId=null; accDeltaX=0; }
-                if(t.identifier===touchRightId) { if(Math.abs(accDeltaY)<5 && isGrounded) velocity.y = JUMP_FORCE; touchRightId=null; accDeltaY=0; }
+
+        function setScreen(name) {
+            gameState = name;
+            document.querySelectorAll('.modal').forEach(el => el.classList.add('hidden'));
+
+            // Safe access for tutorial elements
+            const tl = document.getElementById('tut-left');
+            const tr = document.getElementById('tut-right');
+            if(tl) tl.classList.add('hidden');
+            if(tr) tr.classList.add('hidden');
+
+            if(name === 'LEVEL_SELECT') {
+                document.getElementById('screen-select').classList.remove('hidden');
+                currentForwardSpeed = 0; resetBall();
+            } else if(name === 'MENU') {
+                document.getElementById('screen-ready').classList.remove('hidden');
+            } else if(name === 'WIN') {
+                document.getElementById('screen-win').classList.remove('hidden');
+            } else if(name === 'PLAYING') {
+                if(tl) tl.classList.remove('hidden');
+                if(tr) tr.classList.remove('hidden');
+                setTimeout(() => { 
+                    if(tl) tl.classList.add('hidden'); 
+                    if(tr) tr.classList.add('hidden'); 
+                }, 3000);
             }
         }
 
-        function startGame() { 
-            ball.position.set(0, 5, 10); velocity.set(0,0,0); currentForwardSpeed = BASE_SPEED;
-            setScreen('PLAYING'); clock.start(); 
+        function selectLevel(index) {
+            levelData = LEVELS[index];
+            buildLevel();
+            document.getElementById('ready-title').innerText = levelData.name;
+            setScreen('MENU');
         }
 
-        // FIX: winGame function was missing
         function winGame() {
-            document.getElementById('win-time').innerText = clock.getElapsedTime().toFixed(2);
+            document.getElementById('win-time').innerText = document.getElementById('timer').innerText;
             setScreen('WIN');
         }
-
-        function setScreen(n) {
-            gameState = n;
-            document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
-            if(n==='LEVEL_SELECT') document.getElementById('screen-select').classList.remove('hidden');
-            if(n==='MENU') document.getElementById('screen-ready').classList.remove('hidden');
-            if(n==='WIN') document.getElementById('screen-win').classList.remove('hidden');
-        }
-
-        function createLevelButtons() {
-            const list = document.getElementById('level-list');
-            LEVELS.forEach((l, i) => {
-                const b = document.createElement('button'); b.className='level-btn'; b.innerText = l.name;
-                b.onclick = () => { levelData = l; buildLevel(); document.getElementById('ready-title').innerText = l.name; setScreen('MENU'); };
-                list.appendChild(b);
-            });
-        }
-
-        function onWindowResize() { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); }
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = Math.min(clock.getDelta(), 0.1);
 
-            if(gameState === 'PLAYING') {
-                currentForwardSpeed = THREE.MathUtils.clamp(currentForwardSpeed + (inputSpeed * 70 * delta) - (accDeltaY * 0.5), MIN_SPEED, MAX_SPEED);
-                accDeltaY *= 0.9;
+            if (gameState === 'PLAYING') {
+                updatePhysics(delta);
+                updateCamera();
+                updateUI();
                 
-                ball.position.z -= currentForwardSpeed * delta;
-                let tx = (inputX * 40) + (accDeltaX * 5); accDeltaX *= 0.8;
-                if(controlsInverted) tx = -tx;
-                velocity.x = THREE.MathUtils.lerp(velocity.x, tx, 15*delta);
-                ball.position.x = THREE.MathUtils.clamp(ball.position.x + velocity.x * delta, -9, 9);
-                
-                velocity.y -= GRAVITY * delta; ball.position.y += velocity.y * delta;
-                
-                // Collision
-                const row = Math.round(-ball.position.z / TILE_LENGTH), col = Math.round(ball.position.x / TILE_WIDTH + 2);
-                const flat = levelData.data.flat();
-                if(row >= flat.length) winGame();
-                else if(ball.position.y <= BALL_RADIUS) {
-                    const char = (flat[row] || "")[col];
-                    if(char && char !== ' ') {
-                        ball.position.y = BALL_RADIUS; velocity.y = 0; isGrounded = true;
-                        if(char==='B') { velocity.y = JUMP_FORCE; isGrounded = false; }
-                        if((char==='C'||char==='U') && !controlsInverted) { controlsInverted = true; inversionTimer = 5; document.getElementById('status-indicator').style.display='block'; }
-                    } else if(ball.position.y < -30) startGame();
-                } else isGrounded = false;
+                const speedRatio = (currentForwardSpeed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED);
+                const clampedRatio = Math.max(0, Math.min(1, speedRatio));
 
-                if(controlsInverted) { inversionTimer -= delta; if(inversionTimer<=0) { controlsInverted=false; document.getElementById('status-indicator').style.display='none'; } }
+                // SHAKE CALCULATION (Speed + Impact)
+                let totalShake = 0;
+                if (currentForwardSpeed > 95) {
+                    totalShake += (clampedRatio - 0.5) * 0.05;
+                }
+                if (impactShake > 0) {
+                    totalShake += impactShake;
+                    impactShake = Math.max(0, impactShake - delta * 2); // Decay
+                }
 
-                camera.position.lerp(new THREE.Vector3(ball.position.x*0.4, 7.5 + (currentForwardSpeed/MAX_SPEED)*3, ball.position.z + 14), 0.12);
-                camera.lookAt(ball.position.x, ball.position.y - 1.5, ball.position.z - 28);
-                document.getElementById('timer').innerText = clock.getElapsedTime().toFixed(2);
-                document.getElementById('speed-bar').style.height = ((currentForwardSpeed-MIN_SPEED)/(MAX_SPEED-MIN_SPEED)*100) + '%';
+                if (totalShake > 0) {
+                    camera.position.x += (Math.random() - 0.5) * totalShake;
+                    camera.position.y += (Math.random() - 0.5) * totalShake;
+                }
+                
+                // Dynamic RGB Shift
+                if (rgbShiftPass) {
+                     const baseRGB = parseFloat(document.getElementById('rgb-intensity').value);
+                     // Add impact spike to RGB + Speed Factor
+                     rgbShiftPass.uniforms['amount'].value = baseRGB + (clampedRatio * 0.003) + (impactShake * 0.01); 
+                }
+
+                if (speedLines) {
+                    speedLines.position.z = camera.position.z - 50; 
+                    speedLines.material.opacity = clampedRatio * 0.7; // MORE VISIBLE
+                    const pos = speedLines.geometry.attributes.position.array;
+                    for(let i=2; i<pos.length; i+=3) {
+                        pos[i] += currentForwardSpeed * delta * 3.0; // FASTER LINES
+                        if(pos[i] > 50) pos[i] -= 400; 
+                    }
+                    speedLines.geometry.attributes.position.needsUpdate = true;
+                }
+            } else {
+                if(ballMesh) { 
+                    ballMesh.rotation.y += delta; 
+                    ballMesh.rotation.z += delta * 0.5; 
+                    // Pixel Art Rotation - Rounding rotation to steps? Nah too jerky, just let NearestFilter do its work
+                }
+                camera.position.x = Math.sin(clock.elapsedTime * 0.15) * 3;
+                camera.lookAt(0,0,-30);
+                
+                if(rgbShiftPass) {
+                    const baseRGB = parseFloat(document.getElementById('rgb-intensity').value);
+                    rgbShiftPass.uniforms['amount'].value = baseRGB;
+                }
+                if(speedLines) speedLines.material.opacity = 0;
             }
+            
+            if(bgSun && camera) {
+                bgSun.position.z = camera.position.z - 900;
+                bgSun.rotation.z += delta * 0.04;
+            }
+            if(particles) particles.rotation.y += delta * 0.03;
+            bgShapes.forEach(mesh => {
+                mesh.rotation.x += mesh.userData.rotSpeed;
+                mesh.rotation.z += mesh.userData.rotSpeed * 0.5;
+                mesh.position.y += Math.sin(clock.elapsedTime * mesh.userData.floatSpeed) * 0.04;
+                if(camera) mesh.position.z = camera.position.z - 500 + (mesh.userData.floatSpeed * 1200); 
+            });
+
             composer.render();
+        }
+
+        function updatePhysics(delta) {
+            if (isRecovering) {
+                currentForwardSpeed = THREE.MathUtils.lerp(currentForwardSpeed, BASE_SPEED, 3.0 * delta);
+                if (Math.abs(currentForwardSpeed - BASE_SPEED) < 5) isRecovering = false;
+            } else {
+                if (inputSpeed === 1) currentForwardSpeed += 75 * delta;
+                else if (inputSpeed === -1) currentForwardSpeed -= 75 * delta;
+                if (accDeltaY !== 0) { currentForwardSpeed -= accDeltaY * 7.0 * delta * 10; accDeltaY = 0; }
+                if (currentForwardSpeed > MAX_SPEED) currentForwardSpeed = MAX_SPEED;
+                if (currentForwardSpeed < MIN_SPEED) currentForwardSpeed = MIN_SPEED;
+            }
+
+            ball.position.z -= currentForwardSpeed * delta;
+            
+            let touchVel = 0;
+            if (accDeltaX !== 0) { touchVel = accDeltaX * 7.0; accDeltaX = 0; }
+            let targetXVel = (inputX * 40) + touchVel;
+            if (controlsInverted) targetXVel = -targetXVel;
+
+            velocity.x = THREE.MathUtils.lerp(velocity.x, targetXVel, 16.0 * delta);
+            ball.position.x += velocity.x * delta;
+            
+            const wall = (LANE_COUNT * TILE_WIDTH) / 2 - BALL_RADIUS; 
+            if (ball.position.x > wall) { ball.position.x = wall; velocity.x = 0; }
+            if (ball.position.x < -wall) { ball.position.x = -wall; velocity.x = 0; }
+
+            // Ball Rolling - Apply quaternion for better rolling visual?
+            // Simple rotation is fine for now
+            const rollSpeed = currentForwardSpeed * delta / BALL_RADIUS;
+            ballMesh.rotation.x -= rollSpeed;
+            ballMesh.rotation.z -= (velocity.x * delta / BALL_RADIUS);
+
+            velocity.y -= GRAVITY * delta;
+            ball.position.y += velocity.y * delta;
+
+            checkCollisions(delta);
+            if (ball.position.y < -35) triggerRespawn();
+            
+            if (controlsInverted) {
+                inversionTimer -= delta;
+                if (inversionTimer <= 0) {
+                    controlsInverted = false;
+                    document.getElementById('status-indicator').style.display = 'none';
+                }
+            }
+        }
+
+        function checkCollisions(delta) {
+            const zPos = -ball.position.z;
+            const flatData = levelData.data.flat();
+            const gridRow = Math.round(zPos / TILE_LENGTH);
+            const gridCol = Math.round((ball.position.x / TILE_WIDTH) + 2);
+            let tileType = ' ';
+            
+            if (gridRow >= 0 && gridRow < flatData.length) {
+                if (gridCol >= 0 && gridCol < LANE_COUNT) tileType = flatData[gridRow][gridCol];
+            } else if (gridRow >= flatData.length) { winGame(); return; }
+
+            if (ball.position.y <= BALL_RADIUS) {
+                if (tileType !== ' ') {
+                    if (velocity.y < 0 && ball.position.y > (isRecovering ? -5 : -1.2)) {
+                        
+                        // LANDING IMPACT JUICE
+                        if (!isGrounded && velocity.y < -50) {
+                            impactShake = 0.3; // Trigger shake on hard landing
+                        }
+
+                        ball.position.y = BALL_RADIUS;
+                        velocity.y = 0;
+                        isGrounded = true;
+                        
+                        if(tileType === 'V') currentForwardSpeed = THREE.MathUtils.lerp(currentForwardSpeed, MIN_SPEED, 3.5*delta);
+                        if(tileType === 'J') currentForwardSpeed = THREE.MathUtils.lerp(currentForwardSpeed, MAX_SPEED, 3.5*delta);
+                        if(tileType === 'B') { 
+                            velocity.y = JUMP_FORCE; 
+                            isGrounded = false; 
+                            impactShake = 0.2; // Small shake on jump launch
+                        }
+                        if(tileType === 'C' || tileType === 'U') {
+                            if (!controlsInverted) {
+                                controlsInverted = true; inversionTimer = 5.0;
+                                document.getElementById('status-indicator').style.display = 'block';
+                                impactShake = 0.5; // Big shake on invert
+                            } else inversionTimer = 5.0;
+                        }
+                    }
+                }
+            } else isGrounded = false;
+        }
+
+        function triggerRespawn() {
+            if (gameState === 'RESPAWNING') return;
+            gameState = 'RESPAWNING';
+            currentForwardSpeed = 0; velocity.set(0,0,0);
+            const flatData = levelData.data.flat();
+            setTimeout(() => {
+                const currentGridRow = Math.round(-ball.position.z / TILE_LENGTH);
+                let safeRow = currentGridRow + 3; 
+                let foundSafe = false;
+                while (!foundSafe && safeRow < flatData.length) {
+                    if (flatData[safeRow][2] !== ' ') foundSafe = true;
+                    else safeRow++;
+                }
+                if (!foundSafe) { winGame(); return; }
+                ball.position.z = -(safeRow * TILE_LENGTH);
+                ball.position.x = 0; ball.position.y = 20;
+                velocity.y = 40; currentForwardSpeed = BASE_SPEED; isRecovering = true;
+                gameState = 'PLAYING';
+            }, 600);
+        }
+
+        function updateCamera() {
+            const targetZ = ball.position.z + 14; 
+            const targetX = ball.position.x * 0.45;
+            camera.position.z += (targetZ - camera.position.z) * 0.12;
+            camera.position.x += (targetX - camera.position.x) * 0.1;
+            
+            // INCREASED FOV DISTORTION FOR SPEED
+            const speedRatio = currentForwardSpeed / MAX_SPEED;
+            camera.position.y = 7.5 + speedRatio * 1.5; // Lower slightly at high speed? No keep it standard
+            camera.fov = 60 + speedRatio * 30; // MORE FOV STRETCH (60 -> 90)
+            camera.updateProjectionMatrix();
+            
+            camera.lookAt(ball.position.x, ball.position.y - 1.5, ball.position.z - 28);
+        }
+
+        function updateUI() {
+            document.getElementById('timer').innerText = clock.getElapsedTime().toFixed(2);
+            const pct = Math.max(0, Math.min(100, ((currentForwardSpeed - MIN_SPEED) / (MAX_SPEED-MIN_SPEED)) * 100));
+            document.getElementById('speed-bar').style.height = pct + '%';
+        }
+
+        function onKeyDown(e) {
+            if (gameState !== 'PLAYING') return;
+            if(e.code==='ArrowLeft') inputX = -1;
+            if(e.code==='ArrowRight') inputX = 1;
+            if(e.code==='ArrowUp') inputSpeed = 1;
+            if(e.code==='ArrowDown') inputSpeed = -1;
+            if(e.code==='Space' && isGrounded) {
+                velocity.y = JUMP_FORCE;
+                impactShake = 0.2; // Jump Shake
+            }
+        }
+        function onKeyUp(e) {
+            if(e.code==='ArrowLeft'||e.code==='ArrowRight') inputX = 0;
+            if(e.code==='ArrowUp'||e.code==='ArrowDown') inputSpeed = 0;
+        }
+        function setupSplitTouch() {
+            document.addEventListener('touchstart', handleTouchStart, {passive:false});
+            document.addEventListener('touchmove', handleTouchMove, {passive:false});
+            document.addEventListener('touchend', handleTouchEnd, {passive:false});
+        }
+        function handleTouchStart(e) {
+            if (gameState !== 'PLAYING' || e.target.tagName==='BUTTON' || e.target.closest('#settings-panel')) return;
+            e.preventDefault();
+            const half = window.innerWidth/2;
+            for (let i=0; i<e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if(t.clientX < half && touchLeftId===null) { touchLeftId=t.identifier; lastTouchLeftX=t.clientX; accDeltaX=0; }
+                else if(t.clientX >= half && touchRightId===null) { touchRightId=t.identifier; lastTouchRightY=t.clientY; accDeltaY=0; isRightDragging=false; }
+            }
+        }
+        function handleTouchMove(e) {
+            if (gameState !== 'PLAYING') return;
+            e.preventDefault();
+            for (let i=0; i<e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if(t.identifier===touchLeftId) { accDeltaX += t.clientX - lastTouchLeftX; lastTouchLeftX=t.clientX; }
+                if(t.identifier===touchRightId) { 
+                    const d = t.clientY - lastTouchRightY; accDeltaY += d; lastTouchRightY=t.clientY; 
+                    if(Math.abs(d)>2) isRightDragging=true; 
+                }
+            }
+        }
+        function handleTouchEnd(e) {
+            if (gameState !== 'PLAYING') return;
+            e.preventDefault();
+            for (let i=0; i<e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if(t.identifier===touchLeftId) { touchLeftId=null; accDeltaX=0; }
+                if(t.identifier===touchRightId) {
+                    if(!isRightDragging && isGrounded) {
+                        velocity.y = JUMP_FORCE;
+                        impactShake = 0.2;
+                    }
+                    touchRightId=null; accDeltaY=0; isRightDragging=false;
+                }
+            }
+        }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function createLevelButtons() {
+            const list = document.getElementById('level-list');
+            list.innerHTML='';
+            LEVELS.forEach((l,i)=>{
+                const b = document.createElement('button');
+                b.className='menu-btn level-btn';
+                b.innerHTML=`${l.name}<br><span style='font-size:10px;color:#aaa'>${l.desc || ''}</span>`;
+                b.onclick=(e)=>{e.stopPropagation(); selectLevel(i);};
+                list.appendChild(b);
+            });
         }
 
         init();
