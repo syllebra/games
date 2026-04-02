@@ -20,8 +20,7 @@
             /* Palette des jeux */
             --color-regicide: #ef4444;    /* Rouge - Roi */
             --color-scoundrel: #10b981;   /* Vert - Poison */
-            --color-gridcannon: #6366f1;  /* Indigo - Stratégie */
-            --color-isaludo: #f59e0b;     /* Ambre - Désert */
+            --color-wordplay: #a855f7;    /* Violet - Lettres */
             --color-chess: #e2e8f0;       /* Argent/Blanc - Échecs */
             --color-locked: #475569;
             
@@ -281,8 +280,7 @@
         /* Helper pour colorer les éléments dynamiquement */
         .panel[data-theme="regicide"] { --theme: var(--color-regicide); }
         .panel[data-theme="scoundrel"] { --theme: var(--color-scoundrel); }
-        .panel[data-theme="gridcannon"] { --theme: var(--color-gridcannon); }
-        .panel[data-theme="isaludo"] { --theme: var(--color-isaludo); }
+        .panel[data-theme="wordplay"] { --theme: var(--color-wordplay); }
         .panel[data-theme="chess"] { --theme: var(--color-chess); }
         .panel[data-theme="locked"] { --theme: var(--color-locked); }
 
@@ -345,29 +343,15 @@
             </div>
         </a>
 
-        <!-- JEU 3 : GRID CANNON -->
-        <a href="gridcannon.html" class="panel" data-theme="gridcannon">
+        <!-- JEU 3 : WORDPLAY -->
+        <a href="https://syllebra.github.io/wordplay" class="panel" data-theme="wordplay">
             <div class="panel-bg"></div>
             <div class="content-wrapper">
-                <div class="icon-box"><i data-lucide="grid-3x3" width="48" height="48" stroke-width="1.5"></i></div>
-                <div class="tagline">Stratégie</div>
-                <h2>Grid Cannon</h2>
+                <div class="icon-box"><i data-lucide="languages" width="48" height="48" stroke-width="1.5"></i></div>
+                <div class="tagline">Lettres</div>
+                <h2>Wordplay</h2>
                 <div class="description">
-                    <p>Un solitaire tactique sur une grille.</p>
-                </div>
-                <div class="btn-play">Jouer</div>
-            </div>
-        </a>
-
-        <!-- JEU 4 : ISALUDO -->
-        <a href="isaludo.html" class="panel" data-theme="isaludo">
-            <div class="panel-bg"></div>
-            <div class="content-wrapper">
-                <div class="icon-box"><i data-lucide="swords" width="48" height="48" stroke-width="1.5"></i></div>
-                <div class="tagline">Bataille</div>
-                <h2>Isaludo</h2>
-                <div class="description">
-                    <p>Affrontez vos ennemis dans ce solitaire médiéval.</p>
+                    <p>Des jeux avec les mots.</p>
                 </div>
                 <div class="btn-play">Jouer</div>
             </div>
